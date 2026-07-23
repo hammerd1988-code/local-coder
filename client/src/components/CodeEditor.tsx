@@ -1,8 +1,9 @@
 import * as React from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { OnMount } from '@monaco-editor/react';
 
 interface CodeEditorProps {
   selectedFileId: number | null;
+  theme: string;
 }
 
 interface FileData {
@@ -12,7 +13,7 @@ interface FileData {
   language: string;
 }
 
-export default function CodeEditor({ selectedFileId }: CodeEditorProps) {
+export default function CodeEditor({ selectedFileId, theme }: CodeEditorProps) {
   const [file, setFile] = React.useState<FileData | null>(null);
   const [content, setContent] = React.useState('');
 
@@ -59,10 +60,43 @@ export default function CodeEditor({ selectedFileId }: CodeEditorProps) {
     saveFile(newContent);
   }
 
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    // Define custom cyberpunk theme
+    monaco.editor.defineTheme('cyberpunk', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '00ff9f', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'ff00ff', fontStyle: 'bold' },
+        { token: 'string', foreground: '00ffff' },
+        { token: 'number', foreground: 'ff00ff' },
+        { token: 'type', foreground: 'ffff00' },
+        { token: 'function', foreground: 'ff0080' },
+        { token: 'variable', foreground: '00ffff' },
+        { token: 'identifier', foreground: '00ccff' },
+      ],
+      colors: {
+        'editor.background': '#0a0e27',
+        'editor.foreground': '#00ffff',
+        'editor.lineHighlightBackground': '#1a1a3e',
+        'editorCursor.foreground': '#ff00ff',
+        'editor.selectionBackground': '#ff00ff40',
+        'editor.inactiveSelectionBackground': '#ff00ff20',
+        'editorLineNumber.foreground': '#00ff9f',
+        'editorLineNumber.activeForeground': '#ff00ff',
+        'editorIndentGuide.background': '#00ffff20',
+        'editorIndentGuide.activeBackground': '#00ffff40',
+      }
+    });
+  };
+
   if (!file) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Select a file to edit
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-gray-950 to-gray-900">
+        <div className="text-center">
+          <div className="text-cyan-400 text-lg font-mono mb-2">{'>'} Select a file to edit</div>
+          <div className="text-purple-400/60 text-sm font-mono">No file loaded</div>
+        </div>
       </div>
     );
   }
@@ -74,13 +108,16 @@ export default function CodeEditor({ selectedFileId }: CodeEditorProps) {
         language={file.language}
         value={content}
         onChange={handleEditorChange}
-        theme="vs-dark"
+        onMount={handleEditorDidMount}
+        theme={theme}
         options={{
           minimap: { enabled: false },
           fontSize: 14,
           lineNumbers: 'on',
           scrollBeyondLastLine: false,
-          automaticLayout: true
+          automaticLayout: true,
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          fontLigatures: true,
         }}
       />
     </div>

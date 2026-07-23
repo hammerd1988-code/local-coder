@@ -95,31 +95,32 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
   }
 
   return (
-    <div className="h-full flex flex-col bg-background border-r">
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold">Files</h2>
+    <div className="h-full flex flex-col bg-black/40 border-r border-cyan-500/30 backdrop-blur-sm">
+      <div className="p-4 border-b border-cyan-500/30 flex items-center justify-between">
+        <h2 className="font-semibold text-cyan-400 font-mono">{'>'} Files</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" variant="ghost">
+            <Button size="sm" variant="ghost" className="hover:bg-cyan-500/20 hover:text-cyan-400">
               <Plus className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-gray-950 border-cyan-500/50">
             <DialogHeader>
-              <DialogTitle>New File</DialogTitle>
+              <DialogTitle className="text-cyan-400">New File</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="filepath">File Path</Label>
+                <Label htmlFor="filepath" className="text-purple-300">File Path</Label>
                 <Input
                   id="filepath"
                   placeholder="src/index.ts"
                   value={newFilePath}
                   onChange={(e) => setNewFilePath(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && createFile()}
+                  className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                 />
               </div>
-              <Button onClick={createFile} className="w-full">Create</Button>
+              <Button onClick={createFile} className="w-full bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500">Create</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -127,7 +128,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
       
       <div className="flex-1 overflow-y-auto">
         {files.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground text-center">
+          <div className="p-4 text-sm text-purple-400/60 text-center font-mono">
             No files yet. Create one to get started.
           </div>
         ) : (
@@ -135,19 +136,19 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
             {files.map(file => (
               <div
                 key={file.id}
-                className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-accent group ${
-                  selectedFileId === file.id ? 'bg-accent' : ''
+                className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-cyan-500/20 group transition-colors ${
+                  selectedFileId === file.id ? 'bg-cyan-500/30 border-l-2 border-cyan-400' : ''
                 }`}
                 onClick={() => onSelectFile(file.id)}
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <File className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm truncate">{file.path}</span>
+                  <File className="h-4 w-4 flex-shrink-0 text-purple-400" />
+                  <span className="text-sm truncate text-cyan-100 font-mono">{file.path}</span>
                 </div>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteFile(file.id);

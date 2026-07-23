@@ -133,41 +133,43 @@ export default function ChatPanel({ selectedFileId }: ChatPanelProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-semibold">AI Assistant</h2>
+    <div className="h-full flex flex-col bg-black/40 backdrop-blur-sm">
+      <div className="p-4 border-b border-cyan-500/30 flex items-center justify-between">
+        <h2 className="font-semibold text-purple-400 font-mono">{'>'} AI Assistant</h2>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={clearChat}>
+          <Button size="sm" variant="ghost" onClick={clearChat} className="hover:bg-red-500/20 hover:text-red-400">
             <Trash2 className="h-4 w-4" />
           </Button>
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="ghost">
+              <Button size="sm" variant="ghost" className="hover:bg-cyan-500/20 hover:text-cyan-400">
                 <Settings className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-gray-950 border-cyan-500/50">
               <DialogHeader>
-                <DialogTitle>Settings</DialogTitle>
+                <DialogTitle className="text-cyan-400">Settings</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="base-url">Ollama Base URL</Label>
+                  <Label htmlFor="base-url" className="text-purple-300">Ollama Base URL</Label>
                   <Input
                     id="base-url"
                     value={settings.ollama_base_url}
                     onChange={(e) => setSettings({ ...settings, ollama_base_url: e.target.value })}
+                    className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="model">Model Name</Label>
+                  <Label htmlFor="model" className="text-purple-300">Model Name</Label>
                   <Input
                     id="model"
                     value={settings.model_name}
                     onChange={(e) => setSettings({ ...settings, model_name: e.target.value })}
+                    className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
                 </div>
-                <Button onClick={saveSettings} className="w-full">Save</Button>
+                <Button onClick={saveSettings} className="w-full bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500">Save</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -176,7 +178,7 @@ export default function ChatPanel({ selectedFileId }: ChatPanelProps) {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center text-sm text-muted-foreground pt-8">
+          <div className="text-center text-sm text-purple-400/60 pt-8 font-mono">
             Start a conversation with your AI assistant
           </div>
         ) : (
@@ -186,10 +188,10 @@ export default function ChatPanel({ selectedFileId }: ChatPanelProps) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-lg p-3 font-mono text-sm ${
                   message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
+                    ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white border border-cyan-400/30'
+                    : 'bg-black/60 text-cyan-100 border border-purple-500/30'
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -200,7 +202,7 @@ export default function ChatPanel({ selectedFileId }: ChatPanelProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-cyan-500/30">
         <div className="flex gap-2">
           <Input
             placeholder="Ask about code or request changes..."
@@ -208,8 +210,13 @@ export default function ChatPanel({ selectedFileId }: ChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             disabled={isLoading}
+            className="bg-black/40 border-cyan-500/50 text-cyan-100 placeholder:text-purple-400/40 focus:border-cyan-400"
           />
-          <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
+          <Button 
+            onClick={sendMessage} 
+            disabled={isLoading || !input.trim()}
+            className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
