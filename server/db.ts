@@ -25,10 +25,36 @@ interface SettingsTable {
   updated_at: number;
 }
 
+interface PluginsTable {
+  id: number;
+  name: string;
+  enabled: number;
+  config: string;
+  created_at: number;
+  updated_at: number;
+}
+
+interface GitBranchesTable {
+  id: number;
+  name: string;
+  is_current: number;
+  last_commit: string | null;
+  created_at: number;
+}
+
+interface GitStatusTable {
+  id: number;
+  status: string;
+  updated_at: number;
+}
+
 export interface DatabaseSchema {
   files: FilesTable;
   chat_messages: ChatMessagesTable;
   settings: SettingsTable;
+  plugins: PluginsTable;
+  git_branches: GitBranchesTable;
+  git_status: GitStatusTable;
 }
 
 const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";

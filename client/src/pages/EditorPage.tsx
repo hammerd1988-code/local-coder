@@ -4,10 +4,14 @@ import FileExplorer from '../components/FileExplorer';
 import CodeEditor from '../components/CodeEditor';
 import ChatPanel from '../components/ChatPanel';
 import ThemeSwitcher from '../components/ThemeSwitcher';
+import PluginsPanel from '../components/PluginsPanel';
+import GitPanel from '../components/GitPanel';
+import { Button } from '../components/ui/button';
 
 export default function EditorPage() {
   const [selectedFileId, setSelectedFileId] = React.useState<number | null>(null);
   const [editorTheme, setEditorTheme] = React.useState<string>('vs-dark');
+  const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git'>('chat');
 
   React.useEffect(() => {
     loadTheme();
@@ -40,10 +44,46 @@ export default function EditorPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20">
-      <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm">
+      <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm justify-between">
         <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-          {'<'} LOCAL.CODE {'/>'}
+          {'<'} LOCAL.CODE {'/>'}.
         </h1>
+        
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setRightPanel('chat')}
+            variant="ghost"
+            className={`text-xs font-mono ${
+              rightPanel === 'chat' 
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50' 
+                : 'text-gray-400 hover:text-cyan-400'
+            }`}
+          >
+            CHAT
+          </Button>
+          <Button
+            onClick={() => setRightPanel('git')}
+            variant="ghost"
+            className={`text-xs font-mono ${
+              rightPanel === 'git' 
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50' 
+                : 'text-gray-400 hover:text-cyan-400'
+            }`}
+          >
+            GIT
+          </Button>
+          <Button
+            onClick={() => setRightPanel('plugins')}
+            variant="ghost"
+            className={`text-xs font-mono ${
+              rightPanel === 'plugins' 
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50' 
+                : 'text-gray-400 hover:text-cyan-400'
+            }`}
+          >
+            PLUGINS
+          </Button>
+        </div>
       </header>
       
       <div className="flex-1 overflow-hidden">
@@ -69,7 +109,9 @@ export default function EditorPage() {
           <PanelResizeHandle className="w-1 bg-cyan-500/30 hover:bg-cyan-400 transition-colors" />
           
           <Panel defaultSize={30} minSize={20} maxSize={50}>
-            <ChatPanel selectedFileId={selectedFileId} />
+            {rightPanel === 'chat' && <ChatPanel selectedFileId={selectedFileId} />}
+            {rightPanel === 'plugins' && <PluginsPanel />}
+            {rightPanel === 'git' && <GitPanel />}
           </Panel>
         </PanelGroup>
       </div>

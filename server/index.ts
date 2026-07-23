@@ -4,6 +4,8 @@ import { setupStaticServing } from './static-serve.js';
 import filesRouter from './routes/files.js';
 import chatRouter from './routes/chat.js';
 import settingsRouter from './routes/settings.js';
+import pluginsRouter from './routes/plugins.js';
+import gitRouter from './routes/git.js';
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/files', filesRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/plugins', pluginsRouter);
+app.use('/api/git', gitRouter);
 
 // Export a function to start the server
 export async function startServer(port) {
