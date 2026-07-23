@@ -1,7 +1,7 @@
 {
-  "name": "Mimo app",
-  "short_name": "",
-  "description": "",
+  "name": "Local Code Editor",
+  "short_name": "CodeEditor",
+  "description": "Local-first code editor with AI assistance",
   "start_url": "/",
   "scope": "/",
   "icons": [
@@ -16,8 +16,8 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "background_color": "#000000",
   "display": "standalone",
   "orientation": "portrait-primary",
   "categories": ["productivity", "utilities"]
