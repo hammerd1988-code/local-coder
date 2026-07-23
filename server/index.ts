@@ -25,6 +25,12 @@ app.use('/api/plugins', pluginsRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  return;
+});
+
 // Export a function to start the server
 export async function startServer(port) {
   try {

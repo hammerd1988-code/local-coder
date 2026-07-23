@@ -1,0 +1,20 @@
+{
+  "container": {
+    "node": "20",
+    "startScript": "start",
+    "buildScript": "build"
+  },
+  "ports": [3000, 3001, 4000],
+  "tasks": {
+    "dev": {
+      "name": "Development Server",
+      "command": "npm start",
+      "runAtStart": true
+    },
+    "build": {
+      "name": "Build Production",
+      "command": "npm run build"
+    }
+  },
+  "template": "node"
+}
