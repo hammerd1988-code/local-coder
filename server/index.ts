@@ -1,11 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import { WebSocketServer } from 'ws';
 import { setupStaticServing } from './static-serve.js';
 import filesRouter from './routes/files.js';
 import chatRouter from './routes/chat.js';
 import settingsRouter from './routes/settings.js';
 import pluginsRouter from './routes/plugins.js';
 import gitRouter from './routes/git.js';
+import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
 
 dotenv.config();
 
@@ -21,6 +23,7 @@ app.use('/api/chat', chatRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/plugins', pluginsRouter);
 app.use('/api/git', gitRouter);
+app.use('/api/terminal', terminalRouter);
 
 // Export a function to start the server
 export async function startServer(port) {
@@ -28,9 +31,20 @@ export async function startServer(port) {
     if (process.env.NODE_ENV === 'production') {
       setupStaticServing(app);
     }
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`API Server running on port ${port}`);
     });
+
+    // Setup WebSocket server for terminal
+    const wss = new WebSocketServer({ 
+      server,
+      path: '/api/terminal'
+    });
+
+    setupTerminalWebSocket(wss);
+    console.log('Terminal WebSocket server initialized');
+
+    return server;
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

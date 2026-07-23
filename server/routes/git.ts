@@ -186,4 +186,50 @@ router.get('/log', async (req, res) => {
   }
 });
 
+// Clone repository
+router.post('/clone', async (req, res) => {
+  try {
+    const { url, targetDir } = req.body;
+    
+    if (!url) {
+      res.status(400).json({ error: 'Repository URL required' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    const sendProgress = (progress: number, message: string) => {
+      res.write(JSON.stringify({ progress, message }) + '\n');
+    };
+
+    sendProgress(10, 'Starting clone...');
+
+    const clonePath = targetDir 
+      ? path.join(dataDirectory, targetDir)
+      : dataDirectory;
+
+    sendProgress(30, 'Cloning repository...');
+
+    await simpleGit().clone(url, clonePath, {
+      '--progress': null,
+    });
+
+    sendProgress(80, 'Initializing repository...');
+
+    // Re-initialize git in the data directory after clone
+    const newGit = simpleGit(clonePath);
+    await newGit.status();
+
+    sendProgress(100, 'Clone complete!');
+
+    console.log('Cloned repository from:', url);
+    res.end();
+  } catch (error) {
+    console.error('Error cloning repository:', error);
+    res.write(JSON.stringify({ error: 'Failed to clone repository' }) + '\n');
+    res.end();
+  }
+});
+
 export default router;
