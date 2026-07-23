@@ -5,7 +5,16 @@
   "type": "module",
   "scripts": {
     "build": "vite build && tsc --project tsconfig.server.json",
-    "start": "tsx watch scripts/dev.ts"
+    "start": "tsx watch scripts/dev.ts",
+    "lint": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "test:coverage": "echo \"No coverage configured yet\" && exit 0",
+    "docker:build": "docker build -t local-coder .",
+    "docker:build:dev": "docker build -t local-coder:dev -f Dockerfile.dev .",
+    "docker:run": "docker-compose up -d",
+    "docker:run:dev": "docker-compose --profile dev up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

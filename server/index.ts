@@ -26,8 +26,13 @@ app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
   return;
 });
 
@@ -39,6 +44,8 @@ export async function startServer(port) {
     }
     const server = app.listen(port, () => {
       console.log(`API Server running on port ${port}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Health check available at: http://localhost:${port}/api/health`);
     });
 
     // Setup WebSocket server for terminal

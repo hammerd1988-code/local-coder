@@ -1,0 +1,206 @@
+stages:
+  - lint
+  - test
+  - build
+  - scan
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+
+# Cache node modules for faster builds
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+# Lint and type check stage
+lint:
+  stage: lint
+  image: node:20-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - echo "Running TypeScript type check..."
+    - npx tsc --noEmit
+    - npx tsc --project tsconfig.server.json --noEmit
+    - echo "Type checking completed"
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Test stage
+test:
+  stage: test
+  image: node:20-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - echo "Running tests..."
+    # Add test commands when configured
+    # - npm test
+    # - npm run test:coverage
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Security scanning
+security:audit:
+  stage: test
+  image: node:20-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm audit --audit-level=moderate
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Build application
+build:app:
+  stage: build
+  image: node:20-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - echo "Building frontend..."
+    - npx vite build
+    - echo "Building backend..."
+    - npx tsc --project tsconfig.server.json
+  artifacts:
+    paths:
+      - dist/
+      - server/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+    - tags
+
+# Build Docker image
+build:docker:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Building Docker image..."
+    - docker build -t $IMAGE_TAG -f Dockerfile .
+    - docker tag $IMAGE_TAG $LATEST_TAG
+    - echo "Pushing Docker image..."
+    - docker push $IMAGE_TAG
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        docker push $LATEST_TAG
+      fi
+  only:
+    - main
+    - develop
+    - tags
+
+# Build development Docker image
+build:docker:dev:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:dev-latest -f Dockerfile.dev .
+    - docker push $CI_REGISTRY_IMAGE:dev-latest
+  only:
+    - develop
+
+# Scan Docker image for vulnerabilities
+scan:trivy:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_TAG
+  allow_failure: true
+  only:
+    - main
+    - develop
+    - tags
+
+# Deploy to staging
+deploy:staging:
+  stage: deploy
+  image: alpine:latest
+  environment:
+    name: staging
+    url: $STAGING_URL
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to staging environment..."
+    # Add deployment commands here
+    # - kubectl config use-context staging
+    # - kubectl set image deployment/app app=$IMAGE_TAG
+    # - kubectl rollout status deployment/app
+    - echo "Deployment completed"
+  only:
+    - develop
+  when: manual
+
+# Deploy to production
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to production environment..."
+    # Add deployment commands here
+    # - kubectl config use-context production
+    # - kubectl set image deployment/app app=$IMAGE_TAG
+    # - kubectl rollout status deployment/app
+    - echo "Running smoke tests..."
+    - curl -f $PRODUCTION_URL/api/health || exit 1
+    - echo "Deployment completed successfully"
+  only:
+    - tags
+    - main
+  when: manual
+  needs:
+    - build:docker
+    - scan:trivy
+
+# Rollback production
+rollback:production:
+  stage: deploy
+  image: alpine:latest
+  environment:
+    name: production
+  script:
+    - echo "Rolling back production deployment..."
+    # - kubectl rollout undo deployment/app
+  only:
+    - main
+    - tags
+  when: manual

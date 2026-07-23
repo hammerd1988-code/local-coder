@@ -1,14 +1,64 @@
+# Dependencies
 node_modules
 npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Build outputs
 dist
-.git
-.gitignore
+build
+*.tsbuildinfo
+
+# Development files
 .env
 .env.local
-.vscode
-*.md
-data/*.sqlite
-data/*.db
+.env.*.local
 *.log
-coverage
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Data directory
+data/*
+!data/.gitkeep
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+k8s
+
+# Documentation
+README.md
+CHANGELOG.md
+docs
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+coverage
+.nyc_output
+
+# Misc
+*.md
+!package.json
+!package-lock.json
