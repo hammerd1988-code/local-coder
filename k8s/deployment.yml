@@ -27,6 +27,9 @@ spec:
         - containerPort: 4000
           name: http
           protocol: TCP
+        - containerPort: 4000
+          name: metrics
+          protocol: TCP
         env:
         - name: NODE_ENV
           valueFrom:

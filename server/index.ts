@@ -8,6 +8,7 @@ import settingsRouter from './routes/settings.js';
 import pluginsRouter from './routes/plugins.js';
 import gitRouter from './routes/git.js';
 import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
+import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 dotenv.config();
 
@@ -17,6 +18,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Metrics middleware (track all requests)
+app.use(metricsMiddleware);
+
 // API routes
 app.use('/api/files', filesRouter);
 app.use('/api/chat', chatRouter);
@@ -24,6 +28,9 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/plugins', pluginsRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
+
+// Metrics endpoint
+app.get('/metrics', metricsHandler);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -46,6 +53,7 @@ export async function startServer(port) {
       console.log(`API Server running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Health check available at: http://localhost:${port}/api/health`);
+      console.log(`Metrics available at: http://localhost:${port}/metrics`);
     });
 
     // Setup WebSocket server for terminal

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { spawn } from 'node-pty';
 import { WebSocketServer, WebSocket } from 'ws';
+import { terminalSessionsActive, terminalSessionsTotal, terminalDataTransferred, websocketConnectionsActive, websocketMessagesTotal } from '../metrics.js';
 
 const router = Router();
 
@@ -10,6 +11,8 @@ const terminals = new Map<string, any>();
 export function setupTerminalWebSocket(wss: WebSocketServer) {
   wss.on('connection', (ws: WebSocket) => {
     console.log('Terminal WebSocket client connected');
+    websocketConnectionsActive.labels('terminal').inc();
+    terminalSessionsTotal.labels('created').inc();
 
     const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
     
@@ -29,6 +32,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
 
     const terminalId = Math.random().toString(36).substring(7);
     terminals.set(terminalId, ptyProcess);
+    terminalSessionsActive.set(terminals.size);
 
     console.log('Terminal process spawned:', terminalId);
 
@@ -37,6 +41,8 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
       try {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(data);
+          terminalDataTransferred.labels('outbound').inc(Buffer.byteLength(data));
+          websocketMessagesTotal.labels('terminal', 'sent').inc();
         }
       } catch (error) {
         console.error('Error sending terminal data:', error);
@@ -47,6 +53,8 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
       console.log('Terminal process exited:', exitCode, signal);
       terminals.delete(terminalId);
+      terminalSessionsActive.set(terminals.size);
+      terminalSessionsTotal.labels('exited').inc();
       ws.close();
     });
 
@@ -54,6 +62,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     ws.on('message', (data: Buffer) => {
       try {
         const message = data.toString();
+        websocketMessagesTotal.labels('terminal', 'received').inc();
         
         // Check if it's a resize message
         try {
@@ -67,6 +76,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
         }
 
         ptyProcess.write(message);
+        terminalDataTransferred.labels('inbound').inc(Buffer.byteLength(message));
       } catch (error) {
         console.error('Error writing to terminal:', error);
       }
@@ -76,12 +86,18 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
       console.log('Terminal WebSocket client disconnected');
       ptyProcess.kill();
       terminals.delete(terminalId);
+      terminalSessionsActive.set(terminals.size);
+      websocketConnectionsActive.labels('terminal').dec();
+      terminalSessionsTotal.labels('closed').inc();
     });
 
     ws.on('error', (error) => {
       console.error('Terminal WebSocket error:', error);
       ptyProcess.kill();
       terminals.delete(terminalId);
+      terminalSessionsActive.set(terminals.size);
+      websocketConnectionsActive.labels('terminal').dec();
+      terminalSessionsTotal.labels('error').inc();
     });
   });
 }

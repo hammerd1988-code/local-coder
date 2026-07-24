@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import simpleGit from 'simple-git';
 import path from 'path';
+import { gitOperationsTotal, gitOperationDuration, gitBranchesCount, gitUnstagedChanges, timeOperation } from '../metrics.js';
 
 const router = Router();
 
@@ -12,7 +13,11 @@ const git = simpleGit(dataDirectory);
 // Get git status
 router.get('/status', async (req, res) => {
   try {
-    const status = await git.status();
+    const status = await timeOperation(
+      () => git.status(),
+      gitOperationDuration,
+      { operation: 'status' }
+    );
     
     // Update cache
     await db
@@ -31,10 +36,13 @@ router.get('/status', async (req, res) => {
       )
       .execute();
 
+    gitUnstagedChanges.set(status.files.length);
+    gitOperationsTotal.labels('status', 'success').inc();
     console.log('Git status:', status.files.length, 'changed files');
     res.json(status);
   } catch (error) {
     console.error('Error getting git status:', error);
+    gitOperationsTotal.labels('status', 'error').inc();
     res.status(500).json({ error: 'Failed to get git status' });
   }
 });
@@ -42,20 +50,24 @@ router.get('/status', async (req, res) => {
 // Get branches
 router.get('/branches', async (req, res) => {
   try {
-    const branches = await git.branchLocal();
+    const branches = await timeOperation(
+      () => git.branchLocal(),
+      gitOperationDuration,
+      { operation: 'branches' }
+    );
     
     // Clear and update branches in database
     await db.deleteFrom('git_branches').execute();
     
     for (const branch of branches.all) {
       await db
-        .insertInto('git_branches')
-        .values({
-          name: branch,
-          is_current: branch === branches.current ? 1 : 0,
-          last_commit: null
-        })
-        .execute();
+          .insertInto('git_branches')
+          .values({
+            name: branch,
+            is_current: branch === branches.current ? 1 : 0,
+            last_commit: null
+          })
+          .execute();
     }
 
     const dbBranches = await db
@@ -64,10 +76,13 @@ router.get('/branches', async (req, res) => {
       .orderBy('name', 'asc')
       .execute();
 
+    gitBranchesCount.set(dbBranches.length);
+    gitOperationsTotal.labels('branches', 'success').inc();
     console.log('Git branches:', dbBranches.length);
     res.json(dbBranches);
   } catch (error) {
     console.error('Error getting branches:', error);
+    gitOperationsTotal.labels('branches', 'error').inc();
     res.status(500).json({ error: 'Failed to get branches' });
   }
 });
@@ -78,11 +93,16 @@ router.post('/branches', async (req, res) => {
     const { name } = req.body;
     
     if (!name) {
+      gitOperationsTotal.labels('create_branch', 'validation_error').inc();
       res.status(400).json({ error: 'Branch name required' });
       return;
     }
 
-    await git.checkoutLocalBranch(name);
+    await timeOperation(
+      () => git.checkoutLocalBranch(name),
+      gitOperationDuration,
+      { operation: 'create_branch' }
+    );
     
     await db
       .insertInto('git_branches')
@@ -93,10 +113,12 @@ router.post('/branches', async (req, res) => {
       })
       .execute();
 
+    gitOperationsTotal.labels('create_branch', 'success').inc();
     console.log('Created branch:', name);
     res.json({ success: true, name });
   } catch (error) {
     console.error('Error creating branch:', error);
+    gitOperationsTotal.labels('create_branch', 'error').inc();
     res.status(500).json({ error: 'Failed to create branch' });
   }
 });
@@ -107,11 +129,16 @@ router.post('/checkout', async (req, res) => {
     const { branch } = req.body;
     
     if (!branch) {
+      gitOperationsTotal.labels('checkout', 'validation_error').inc();
       res.status(400).json({ error: 'Branch name required' });
       return;
     }
 
-    await git.checkout(branch);
+    await timeOperation(
+      () => git.checkout(branch),
+      gitOperationDuration,
+      { operation: 'checkout' }
+    );
     
     // Update current branch flags
     await db
@@ -125,10 +152,12 @@ router.post('/checkout', async (req, res) => {
       .where('name', '=', branch)
       .execute();
 
+    gitOperationsTotal.labels('checkout', 'success').inc();
     console.log('Switched to branch:', branch);
     res.json({ success: true, branch });
   } catch (error) {
     console.error('Error switching branch:', error);
+    gitOperationsTotal.labels('checkout', 'error').inc();
     res.status(500).json({ error: 'Failed to switch branch' });
   }
 });
@@ -139,23 +168,31 @@ router.post('/commit', async (req, res) => {
     const { message, files } = req.body;
     
     if (!message) {
+      gitOperationsTotal.labels('commit', 'validation_error').inc();
       res.status(400).json({ error: 'Commit message required' });
       return;
     }
 
     // Add files or all if not specified
-    if (files && files.length > 0) {
-      await git.add(files);
-    } else {
-      await git.add('.');
-    }
-
-    const result = await git.commit(message);
+    const result = await timeOperation(
+      async () => {
+        if (files && files.length > 0) {
+          await git.add(files);
+        } else {
+          await git.add('.');
+        }
+        return await git.commit(message);
+      },
+      gitOperationDuration,
+      { operation: 'commit' }
+    );
     
+    gitOperationsTotal.labels('commit', 'success').inc();
     console.log('Committed:', result.commit);
     res.json({ success: true, commit: result.commit });
   } catch (error) {
     console.error('Error committing:', error);
+    gitOperationsTotal.labels('commit', 'error').inc();
     res.status(500).json({ error: 'Failed to commit' });
   }
 });
@@ -192,6 +229,7 @@ router.post('/clone', async (req, res) => {
     const { url, targetDir } = req.body;
     
     if (!url) {
+      gitOperationsTotal.labels('clone', 'validation_error').inc();
       res.status(400).json({ error: 'Repository URL required' });
       return;
     }
@@ -211,22 +249,28 @@ router.post('/clone', async (req, res) => {
 
     sendProgress(30, 'Cloning repository...');
 
-    await simpleGit().clone(url, clonePath, {
-      '--progress': null,
-    });
+    await timeOperation(
+      async () => {
+        await simpleGit().clone(url, clonePath, {
+          '--progress': null,
+        });
+        // Re-initialize git in the data directory after clone
+        const newGit = simpleGit(clonePath);
+        await newGit.status();
+      },
+      gitOperationDuration,
+      { operation: 'clone' }
+    );
 
     sendProgress(80, 'Initializing repository...');
-
-    // Re-initialize git in the data directory after clone
-    const newGit = simpleGit(clonePath);
-    await newGit.status();
-
     sendProgress(100, 'Clone complete!');
 
+    gitOperationsTotal.labels('clone', 'success').inc();
     console.log('Cloned repository from:', url);
     res.end();
   } catch (error) {
     console.error('Error cloning repository:', error);
+    gitOperationsTotal.labels('clone', 'error').inc();
     res.write(JSON.stringify({ error: 'Failed to clone repository' }) + '\n');
     res.end();
   }

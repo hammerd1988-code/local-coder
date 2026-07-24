@@ -1,0 +1,159 @@
+{
+  "dashboard": {
+    "title": "Local Coder Metrics",
+    "tags": ["local-coder", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(local_coder_http_requests_total[5m])) by (status_code)",
+            "legendFormat": "Status {{ status_code }}"
+          }
+        ]
+      },
+      {
+        "title": "HTTP Request Duration (p95)",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(local_coder_http_request_duration_seconds_bucket[5m])) by (le, route))",
+            "legendFormat": "{{ route }}"
+          }
+        ]
+      },
+      {
+        "title": "Active Terminal Sessions",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "local_coder_terminal_sessions_active"
+          }
+        ]
+      },
+      {
+        "title": "Files in Database",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+        "targets": [
+          {
+            "expr": "local_coder_files_in_database"
+          }
+        ]
+      },
+      {
+        "title": "Git Branches",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+        "targets": [
+          {
+            "expr": "local_coder_git_branches_count"
+          }
+        ]
+      },
+      {
+        "title": "Unstaged Changes",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+        "targets": [
+          {
+            "expr": "local_coder_git_unstaged_changes"
+          }
+        ]
+      },
+      {
+        "title": "File Operations Rate",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum(rate(local_coder_file_operations_total[5m])) by (operation, status)",
+            "legendFormat": "{{ operation }} ({{ status }})"
+          }
+        ]
+      },
+      {
+        "title": "Git Operations Rate",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum(rate(local_coder_git_operations_total[5m])) by (operation, status)",
+            "legendFormat": "{{ operation }} ({{ status }})"
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Resident Memory (MB)"
+          },
+          {
+            "expr": "process_heap_bytes / 1024 / 1024",
+            "legendFormat": "Heap Memory (MB)"
+          }
+        ]
+      },
+      {
+        "title": "CPU Usage",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+        "targets": [
+          {
+            "expr": "rate(process_cpu_user_seconds_total[5m])",
+            "legendFormat": "User CPU"
+          },
+          {
+            "expr": "rate(process_cpu_system_seconds_total[5m])",
+            "legendFormat": "System CPU"
+          }
+        ]
+      },
+      {
+        "title": "Terminal Data Transfer",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+        "targets": [
+          {
+            "expr": "rate(local_coder_terminal_data_transferred_bytes[5m])",
+            "legendFormat": "{{ direction }}"
+          }
+        ]
+      },
+      {
+        "title": "WebSocket Connections",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+        "targets": [
+          {
+            "expr": "local_coder_websocket_connections_active",
+            "legendFormat": "{{ type }}"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate by Route",
+        "type": "graph",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 36 },
+        "targets": [
+          {
+            "expr": "sum(rate(local_coder_http_requests_total{status_code=~\"5..\"}[5m])) by (route)",
+            "legendFormat": "{{ route }}"
+          }
+        ]
+      }
+    ]
+  }
+}
