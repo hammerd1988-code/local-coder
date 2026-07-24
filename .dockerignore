@@ -1,28 +1,22 @@
 # Dependencies
-node_modules
-npm-debug.log
-yarn-error.log
-.pnpm-debug.log
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Build outputs
-dist
-build
+dist/
+.vite/
 *.tsbuildinfo
 
-# Development files
+# Environment files
 .env
 .env.local
 .env.*.local
-*.log
-
-# Git
-.git
-.gitignore
-.gitattributes
 
 # IDE
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
@@ -31,34 +25,40 @@ build
 .DS_Store
 Thumbs.db
 
-# Data directory
-data/*
-!data/.gitkeep
-
-# Docker
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+# Git
+.git/
+.gitignore
+.github/
 
 # CI/CD
-.github
 .gitlab-ci.yml
-k8s
+.circleci/
+azure-pipelines.yml
+.drone.yml
 
 # Documentation
-README.md
-CHANGELOG.md
-docs
+*.md
+docs/
+DEPLOYMENT.md
+CONTRIBUTING.md
 
 # Test files
-**/*.test.ts
-**/*.test.tsx
-**/*.spec.ts
-**/*.spec.tsx
-coverage
-.nyc_output
+coverage/
+.nyc_output/
+test-results/
 
-# Misc
-*.md
-!package.json
-!package-lock.json
+# Development files
+scripts/dev.ts
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile.dev
+
+# Kubernetes
+k8s/
+
+# Data (will be mounted as volume)
+data/
+
+# Logs
+logs/
+*.log

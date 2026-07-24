@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+  - deployment.yml
+  - ingress.yml
+  - hpa.yml
+  - configmap.yml
+  - network-policy.yml
+  - service-monitor.yml
+
+# Add common labels to all resources
+commonLabels:
+  app: local-coder
+  version: v1.0.0
+  managed-by: kustomize
+
+# Add common annotations
+commonAnnotations:
+  description: "Local Coder - Web-based code editor and terminal"
+
+# ConfigMap generator
+configMapGenerator:
+  - name: local-coder-env
+    literals:
+      - ENVIRONMENT=production
+
+# Image replacements
+images:
+  - name: ghcr.io/your-username/local-coder
+    newTag: latest
+
+# Patches for different environments
+patchesStrategicMerge: []
+
+# Add resource limits via patches if needed

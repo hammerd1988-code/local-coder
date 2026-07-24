@@ -1,0 +1,160 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  tags:
+    include:
+      - v*
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '20.x'
+  dockerRegistryServiceConnection: 'dockerHub'
+  imageRepository: 'local-coder'
+  containerRegistry: 'your-registry.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+stages:
+  # Stage 1: Build and Test
+  - stage: Build
+    displayName: 'Build and Test'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Application'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Install Node.js'
+
+          - script: |
+              npm ci
+            displayName: 'Install dependencies'
+
+          - script: |
+              npx tsc --noEmit
+              npx tsc --project tsconfig.server.json --noEmit
+            displayName: 'TypeScript type check'
+
+          - script: |
+              npm run build
+            displayName: 'Build application'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: 'dist'
+              ArtifactName: 'dist'
+              publishLocation: 'Container'
+
+      - job: TestJob
+        displayName: 'Run Tests'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Install Node.js'
+
+          - script: |
+              npm ci
+            displayName: 'Install dependencies'
+
+          - script: |
+              echo "Running tests..."
+              # npm test
+            displayName: 'Run tests'
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/test-results.xml'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
+
+  # Stage 2: Build Docker Image
+  - stage: Docker
+    displayName: 'Build Docker Image'
+    dependsOn: Build
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+    jobs:
+      - job: BuildDocker
+        displayName: 'Build and Push Docker Image'
+        steps:
+          - task: Docker@2
+            displayName: 'Build Docker image'
+            inputs:
+              command: build
+              dockerfile: $(dockerfilePath)
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push Docker image'
+            inputs:
+              command: push
+              containerRegistry: $(dockerRegistryServiceConnection)
+              repository: $(imageRepository)
+              tags: |
+                $(tag)
+                latest
+
+  # Stage 3: Deploy to Staging
+  - stage: DeployStaging
+    displayName: 'Deploy to Staging'
+    dependsOn: Docker
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - deployment: DeployStaging
+        displayName: 'Deploy to Staging Environment'
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    echo "Deploying to staging..."
+                    # kubectl apply -k k8s/environments/staging
+                  displayName: 'Deploy to Kubernetes'
+
+                - script: |
+                    echo "Running health check..."
+                    # ./scripts/health-check.sh $(STAGING_URL)
+                  displayName: 'Health check'
+
+  # Stage 4: Deploy to Production
+  - stage: DeployProduction
+    displayName: 'Deploy to Production'
+    dependsOn: Docker
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployProduction
+        displayName: 'Deploy to Production Environment'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    echo "Deploying to production..."
+                    # kubectl apply -k k8s/environments/production
+                  displayName: 'Deploy to Kubernetes'
+
+                - script: |
+                    echo "Running health check..."
+                    # ./scripts/health-check.sh $(PRODUCTION_URL)
+                  displayName: 'Health check'
+
+                - script: |
+                    echo "Running smoke tests..."
+                  displayName: 'Smoke tests'

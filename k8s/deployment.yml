@@ -29,11 +29,23 @@ spec:
           protocol: TCP
         env:
         - name: NODE_ENV
-          value: "production"
+          valueFrom:
+            configMapKeyRef:
+              name: local-coder-config
+              key: NODE_ENV
         - name: PORT
-          value: "4000"
+          valueFrom:
+            configMapKeyRef:
+              name: local-coder-config
+              key: PORT
         - name: DATA_DIRECTORY
           value: "/app/data"
+        # Add secrets from secretKeyRef if needed
+        # - name: DATABASE_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: local-coder-secrets
+        #       key: database-password
         resources:
           requests:
             memory: "256Mi"

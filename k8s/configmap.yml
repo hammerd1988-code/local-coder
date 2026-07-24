@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-coder-config
+  labels:
+    app: local-coder
+data:
+  # Application configuration
+  NODE_ENV: "production"
+  PORT: "4000"
+  
+  # Feature flags
+  ENABLE_TERMINAL: "true"
+  ENABLE_GIT: "true"
+  ENABLE_PLUGINS: "true"
+  
+  # Logging configuration
+  LOG_LEVEL: "info"
+  
+  # Add custom configuration here

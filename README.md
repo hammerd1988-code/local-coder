@@ -109,6 +109,78 @@ Copy `.env.example` to `.env` and adjust as needed.
 
 SQLite database stored in `data/database.sqlite` with schema managed by Kysely migrations.
 
+## Deployment
+
+This project includes comprehensive CI/CD pipelines and deployment configurations for multiple platforms:
+
+### Supported CI/CD Platforms
+
+- **GitHub Actions** - Complete pipelines for CI, Docker builds, deployments, releases, and code quality
+- **GitLab CI** - Full pipeline with staging and production deployments
+- **CircleCI** - Build, test, and deployment workflows
+- **Azure Pipelines** - Multi-stage pipeline with Docker support
+- **Drone CI** - Lightweight CI/CD configuration
+
+### Kubernetes Deployment
+
+Deploy to Kubernetes clusters with:
+
+```bash
+# Apply basic deployment
+kubectl apply -f k8s/deployment.yml
+kubectl apply -f k8s/ingress.yml
+kubectl apply -f k8s/hpa.yml
+
+# Deploy with Kustomize (recommended)
+kubectl apply -k k8s/environments/staging
+kubectl apply -k k8s/environments/production
+
+# Use deployment script
+./scripts/deploy.sh production v1.0.0
+```
+
+### Docker Deployment
+
+```bash
+# Production
+docker-compose -f docker-compose.prod.yml up -d
+
+# Development
+docker-compose --profile dev up
+```
+
+### Deployment Features
+
+- ✅ Multi-environment support (staging, production)
+- ✅ Horizontal pod autoscaling
+- ✅ Health checks and readiness probes
+- ✅ ConfigMaps and Secrets management
+- ✅ Network policies for security
+- ✅ Prometheus monitoring integration
+- ✅ Automated dependency updates (Dependabot)
+- ✅ Security scanning (Trivy)
+- ✅ Rollback scripts
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+## Scripts
+
+- `npm start` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run type checking
+- `npm test` - Run tests
+- `./scripts/deploy.sh [env] [version]` - Deploy to environment
+- `./scripts/rollback.sh [env] [revision]` - Rollback deployment
+- `./scripts/health-check.sh [url]` - Check application health
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
 ## License
 
 MIT

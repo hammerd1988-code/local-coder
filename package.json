@@ -14,7 +14,10 @@
     "docker:run": "docker-compose up -d",
     "docker:run:dev": "docker-compose --profile dev up -d",
     "docker:stop": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "deploy": "bash scripts/deploy.sh",
+    "rollback": "bash scripts/rollback.sh",
+    "health-check": "bash scripts/health-check.sh"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

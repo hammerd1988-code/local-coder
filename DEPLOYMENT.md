@@ -284,11 +284,101 @@ For additional help:
 - Review health check endpoint
 - Consult documentation
 
+## Deployment Scripts
+
+### Quick Deployment
+
+Use the provided deployment scripts for easier deployment:
+
+```bash
+# Deploy to staging
+./scripts/deploy.sh staging latest
+
+# Deploy to production
+./scripts/deploy.sh production v1.0.0
+
+# Rollback deployment
+./scripts/rollback.sh production
+
+# Health check
+./scripts/health-check.sh https://your-domain.com
+```
+
+### Kustomize-based Deployment
+
+Deploy using Kustomize for environment-specific configurations:
+
+```bash
+# Deploy staging environment
+kubectl apply -k k8s/environments/staging
+
+# Deploy production environment
+kubectl apply -k k8s/environments/production
+
+# Verify deployment
+kubectl get all -n production
+```
+
+## Advanced Kubernetes Features
+
+### ConfigMaps and Secrets
+
+1. **Apply ConfigMap:**
+   ```bash
+   kubectl apply -f k8s/configmap.yml
+   ```
+
+2. **Create Secrets:**
+   ```bash
+   kubectl create secret generic local-coder-secrets \
+     --from-literal=api-key=your-api-key \
+     --from-literal=database-password=your-password
+   ```
+
+### Network Policies
+
+Apply network policies for security:
+```bash
+kubectl apply -f k8s/network-policy.yml
+```
+
+### Monitoring with Prometheus
+
+Deploy ServiceMonitor for Prometheus integration:
+```bash
+kubectl apply -f k8s/service-monitor.yml
+```
+
+## CI/CD Workflows
+
+### Available GitHub Actions Workflows
+
+1. **CI Pipeline** - Automated testing and linting
+2. **Docker Build** - Build and push container images
+3. **Deploy** - Deploy to environments
+4. **Release** - Create GitHub releases
+5. **Code Quality** - Code review and quality checks
+6. **Cleanup** - Clean up old artifacts and images
+
+### Workflow Triggers
+
+- **CI**: Push to main/develop, Pull requests
+- **Docker Build**: Push to main/develop, Tags
+- **Deploy**: Tags, Manual dispatch
+- **Release**: Version tags (v*)
+- **Code Quality**: Pull requests
+- **Cleanup**: Weekly schedule, Manual
+
 ## Next Steps
 
 - [ ] Configure domain and SSL certificates
-- [ ] Set up monitoring and alerting
+- [ ] Set up monitoring and alerting with Prometheus/Grafana
 - [ ] Configure automated backups
-- [ ] Set up log aggregation
+- [ ] Set up log aggregation (ELK/Loki)
 - [ ] Add custom deployment targets
 - [ ] Configure CDN for static assets
+- [ ] Set up Dependabot for automated dependency updates
+- [ ] Configure GitHub environments and protection rules
+- [ ] Set up Slack/Discord notifications for deployments
+- [ ] Implement canary deployments
+- [ ] Add performance testing in CI/CD pipeline

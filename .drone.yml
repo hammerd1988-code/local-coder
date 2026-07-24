@@ -1,0 +1,115 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  # Step 1: Install dependencies
+  - name: install
+    image: node:20-alpine
+    commands:
+      - npm ci
+
+  # Step 2: Lint and type check
+  - name: lint
+    image: node:20-alpine
+    commands:
+      - npx tsc --noEmit
+      - npx tsc --project tsconfig.server.json --noEmit
+    depends_on:
+      - install
+
+  # Step 3: Run tests
+  - name: test
+    image: node:20-alpine
+    commands:
+      - echo "Running tests..."
+      # - npm test
+    depends_on:
+      - install
+
+  # Step 4: Build application
+  - name: build
+    image: node:20-alpine
+    commands:
+      - npm run build
+    depends_on:
+      - lint
+      - test
+
+  # Step 5: Build Docker image
+  - name: docker-build
+    image: plugins/docker
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/${DRONE_REPO}
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      auto_tag: true
+      auto_tag_suffix: ${DRONE_BRANCH}
+    depends_on:
+      - build
+    when:
+      branch:
+        - main
+        - develop
+
+  # Step 6: Deploy to staging
+  - name: deploy-staging
+    image: alpine:latest
+    commands:
+      - apk add --no-cache curl
+      - echo "Deploying to staging..."
+      # - kubectl apply -k k8s/environments/staging
+    depends_on:
+      - docker-build
+    when:
+      branch:
+        - develop
+
+  # Step 7: Deploy to production
+  - name: deploy-production
+    image: alpine:latest
+    commands:
+      - apk add --no-cache curl
+      - echo "Deploying to production..."
+      # - kubectl apply -k k8s/environments/production
+    depends_on:
+      - docker-build
+    when:
+      branch:
+        - main
+      event:
+        - tag
+
+  # Step 8: Notify on completion
+  - name: notify
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: slack_webhook
+      channel: deployments
+      username: drone
+      template: >
+        {{#success build.status}}
+          ✅ Build {{build.number}} succeeded. Branch: {{build.branch}}
+        {{else}}
+          ❌ Build {{build.number}} failed. Branch: {{build.branch}}
+        {{/success}}
+    depends_on:
+      - deploy-staging
+      - deploy-production
+    when:
+      status:
+        - success
+        - failure
+
+trigger:
+  branch:
+    - main
+    - develop
+  event:
+    - push
+    - pull_request
+    - tag

@@ -1,0 +1,104 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  code-review:
+    name: Code Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check file sizes
+        run: |
+          echo "Checking for large files..."
+          find client/src -name "*.tsx" -o -name "*.ts" | while read file; do
+            lines=$(wc -l < "$file")
+            if [ $lines -gt 300 ]; then
+              echo "⚠️  $file has $lines lines (recommended max: 300)"
+            fi
+          done
+      
+      - name: Check for console.log statements
+        run: |
+          echo "Checking for console statements in production code..."
+          if grep -r "console\\.log" client/src --exclude-dir=node_modules --include="*.tsx" --include="*.ts"; then
+            echo "⚠️  Found console.log statements in client code"
+          else
+            echo "✓ No console.log statements found in client code"
+          fi
+        continue-on-error: true
+      
+      - name: Check for TODO comments
+        run: |
+          echo "Checking for TODO comments..."
+          grep -r "TODO\|FIXME\|XXX" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist || true
+        continue-on-error: true
+      
+      - name: Analyze bundle size
+        run: |
+          echo "Building for production..."
+          npm run build
+          echo "Analyzing bundle size..."
+          du -sh dist/
+          find dist -name "*.js" -exec ls -lh {} \; | awk '{print $5, $9}'
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  lint-commits:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check commit messages
+        run: |
+          echo "Checking commit message format..."
+          git log --pretty=format:"%s" origin/${{ github.base_ref }}..${{ github.sha }} | while read msg; do
+            # Check if message is not empty and has reasonable length
+            if [ ${#msg} -lt 10 ]; then
+              echo "⚠️  Commit message too short: $msg"
+            elif [ ${#msg} -gt 100 ]; then
+              echo "⚠️  Commit message too long (>100 chars): ${msg:0:50}..."
+            fi
+          done
+        continue-on-error: true
