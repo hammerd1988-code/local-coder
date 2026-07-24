@@ -27,8 +27,46 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
         ...process.env,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
+        PS1: '\\[\\033[1;36m\\]λ\\[\\033[0m\\] \\[\\033[1;35m\\]\\w\\[\\033[0m\\] \\[\\033[1;32m\\]→\\[\\033[0m\\] ',
       }
     });
+
+    // Setup command aliases for the shell
+    const aliases = [
+      'alias ll="ls -lah --color=auto"',
+      'alias la="ls -A --color=auto"', 
+      'alias l="ls -CF --color=auto"',
+      'alias ..="cd .."',
+      'alias ...="cd ../.."',
+      'alias cls="clear"',
+      'alias h="history"',
+      'alias g="git"',
+      'alias gs="git status"',
+      'alias ga="git add"',
+      'alias gc="git commit"',
+      'alias gp="git push"',
+      'alias gl="git log --oneline --graph --all"',
+      'alias gd="git diff"',
+      'alias n="npm"',
+      'alias ni="npm install"',
+      'alias nr="npm run"',
+      'alias ns="npm start"',
+      'alias nt="npm test"',
+      'alias c="cat"',
+      'alias v="vim"',
+      'alias e="echo"',
+      'alias k="kill"',
+      'alias p="ps aux | grep"',
+      'alias m="mkdir -p"',
+      'alias x="chmod +x"',
+    ];
+
+    // Send aliases to the shell
+    if (shell === 'bash') {
+      aliases.forEach(alias => {
+        ptyProcess.write(`${alias}\r`);
+      });
+    }
 
     const terminalId = Math.random().toString(36).substring(7);
     terminals.set(terminalId, ptyProcess);
@@ -73,6 +111,12 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
           }
         } catch {
           // Not JSON, treat as regular terminal input
+        }
+
+        // Echo command feedback for better UX
+        const trimmedMessage = message.trim();
+        if (trimmedMessage && !trimmedMessage.startsWith('\x1b')) {
+          console.log('Terminal command:', trimmedMessage);
         }
 
         ptyProcess.write(message);

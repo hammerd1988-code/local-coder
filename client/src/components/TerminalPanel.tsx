@@ -54,10 +54,15 @@ export default function TerminalPanel() {
 
     ws.onopen = () => {
       console.log('Terminal WebSocket connected');
-      term.writeln('\x1b[1;36m╔════════════════════════════════════════════╗\x1b[0m');
-      term.writeln('\x1b[1;36m║   LOCAL.CODE Terminal v1.0.0              ║\x1b[0m');
-      term.writeln('\x1b[1;36m║   Type commands to interact with shell    ║\x1b[0m');
-      term.writeln('\x1b[1;36m╚════════════════════════════════════════════╝\x1b[0m');
+      term.writeln('\\x1b[1;36m╔═══════════════════════════════════════════════════════════╗\\x1b[0m');
+      term.writeln('\\x1b[1;36m║   LOCAL.CODE Terminal v2.0.0                             ║\\x1b[0m');
+      term.writeln('\\x1b[1;36m║   Enhanced with command aliases & real-time feedback    ║\\x1b[0m');
+      term.writeln('\\x1b[1;36m╚═══════════════════════════════════════════════════════════╝\\x1b[0m');
+      term.writeln('');
+      term.writeln('\\x1b[1;33m✨ Quick Aliases Available:\\x1b[0m');
+      term.writeln('  \\x1b[36mll\\x1b[0m = ls -lah  │  \\x1b[36m..\\x1b[0m = cd ..  │  \\x1b[36mcls\\x1b[0m = clear');
+      term.writeln('  \\x1b[35mg\\x1b[0m = git  │  \\x1b[35mgs\\x1b[0m = git status  │  \\x1b[35mgl\\x1b[0m = git log');
+      term.writeln('  \\x1b[32mn\\x1b[0m = npm  │  \\x1b[32mni\\x1b[0m = npm install  │  \\x1b[32mnr\\x1b[0m = npm run');
       term.writeln('');
     };
 
