@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { useNavigate } from 'react-router-dom';
 import FileExplorer from '../components/FileExplorer';
 import CodeEditor from '../components/CodeEditor';
 import ChatPanel from '../components/ChatPanel';
@@ -9,8 +10,10 @@ import GitPanel from '../components/GitPanel';
 import TerminalPanel from '../components/TerminalPanel';
 import RepoCloner from '../components/RepoCloner';
 import { Button } from '../components/ui/button';
+import { Activity } from 'lucide-react';
 
 export default function EditorPage() {
+  const navigate = useNavigate();
   const [selectedFileId, setSelectedFileId] = React.useState<number | null>(null);
   const [editorTheme, setEditorTheme] = React.useState<string>('vs-dark');
   const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git' | 'terminal'>('chat');
@@ -99,6 +102,14 @@ export default function EditorPage() {
             }`}
           >
             TERMINAL
+          </Button>
+          <Button
+            onClick={() => navigate('/metrics')}
+            variant="ghost"
+            className="text-xs font-mono text-gray-400 hover:text-green-400 gap-2"
+          >
+            <Activity className="w-4 h-4" />
+            METRICS
           </Button>
         </div>
       </header>
