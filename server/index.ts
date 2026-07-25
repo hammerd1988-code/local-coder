@@ -8,6 +8,7 @@ import settingsRouter from './routes/settings.js';
 import pluginsRouter from './routes/plugins.js';
 import gitRouter from './routes/git.js';
 import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
+import huggingfaceRouter from './routes/huggingface.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/plugins', pluginsRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
+app.use('/api/huggingface', huggingfaceRouter);
 
 // Metrics endpoint
 app.get('/metrics', metricsHandler);

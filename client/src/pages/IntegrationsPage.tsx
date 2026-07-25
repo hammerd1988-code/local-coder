@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Badge } from '../components/ui/badge';
 import IntegrationCard from '../components/integrations/IntegrationCard';
 import IntegrationDetail from '../components/integrations/IntegrationDetail';
+import HuggingFaceExtension from '../components/huggingface/HuggingFaceExtension';
 import { Search, ArrowLeft } from 'lucide-react';
 
 const INTEGRATIONS_DATA = [
@@ -1245,6 +1246,29 @@ const INTEGRATIONS_DATA = [
     ],
     pricing: 'Freemium',
     verified: true
+  },
+  {
+    id: 'huggingface',
+    category: 'ai-coding',
+    name: 'Hugging Face',
+    description: 'Download and manage AI models from Hugging Face',
+    icon: '🤗',
+    featured: true,
+    rating: 4.9,
+    reviews: 5432,
+    downloads: '342K+',
+    tags: ['ai', 'ml', 'models', 'transformers'],
+    longDescription: 'Browse, download, and manage AI models from the Hugging Face Hub. Access thousands of pre-trained models for text generation, image synthesis, speech recognition, and more. Integrate models directly with MCP servers and wrapper utilities.',
+    features: [
+      'Browse 200K+ models',
+      'Download management',
+      'Model library',
+      'Type filtering',
+      'MCP server integration',
+      'Local storage tracking'
+    ],
+    pricing: 'Free',
+    verified: true
   }
 ];
 
@@ -1306,6 +1330,27 @@ export default function IntegrationsPage() {
   const featuredIntegrations = INTEGRATIONS_DATA.filter(i => i.featured);
 
   if (selectedIntegration) {
+    // Special handling for Hugging Face extension
+    if (selectedIntegration.id === 'huggingface') {
+      return (
+        <div className="h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20 flex flex-col">
+          <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm">
+            <Button
+              onClick={() => setSelectedIntegration(null)}
+              variant="ghost"
+              className="text-cyan-400 hover:text-cyan-300 gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Integrations
+            </Button>
+          </header>
+          <div className="flex-1 overflow-auto">
+            <HuggingFaceExtension />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20 flex flex-col">
         <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm">

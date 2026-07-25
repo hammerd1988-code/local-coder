@@ -48,6 +48,21 @@ interface GitStatusTable {
   updated_at: number;
 }
 
+interface HuggingFaceModelsTable {
+  id: number;
+  model_id: string;
+  model_name: string;
+  model_type: string;
+  size_mb: number | null;
+  download_status: 'pending' | 'downloading' | 'completed' | 'failed';
+  download_progress: number | null;
+  local_path: string | null;
+  metadata: string;
+  downloaded_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface DatabaseSchema {
   files: FilesTable;
   chat_messages: ChatMessagesTable;
@@ -55,6 +70,7 @@ export interface DatabaseSchema {
   plugins: PluginsTable;
   git_branches: GitBranchesTable;
   git_status: GitStatusTable;
+  huggingface_models: HuggingFaceModelsTable;
 }
 
 const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
