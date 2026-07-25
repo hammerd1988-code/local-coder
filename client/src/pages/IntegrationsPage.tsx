@@ -56,6 +56,28 @@ const INTEGRATIONS_DATA = [
     verified: true
   },
   {
+    id: 'bitbucket',
+    category: 'version-control',
+    name: 'Bitbucket',
+    description: 'Atlassian Bitbucket Git repository hosting',
+    icon: '🪣',
+    rating: 4.6,
+    reviews: 1234,
+    downloads: '72K+',
+    tags: ['version-control', 'atlassian', 'ci-cd'],
+    longDescription: 'Connect to Bitbucket Cloud or Server for Git repository management. Integrated with Jira and other Atlassian tools.',
+    features: [
+      'Repository management',
+      'Pull requests',
+      'Jira integration',
+      'Branch permissions',
+      'Pipelines',
+      'Code insights'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
     id: 'openai',
     category: 'ai-coding',
     name: 'OpenAI',
@@ -79,6 +101,73 @@ const INTEGRATIONS_DATA = [
     verified: true
   },
   {
+    id: 'copilot',
+    category: 'ai-coding',
+    name: 'GitHub Copilot',
+    description: 'AI pair programmer for code suggestions',
+    icon: '🧑‍✈️',
+    featured: true,
+    rating: 4.8,
+    reviews: 4567,
+    downloads: '312K+',
+    tags: ['ai-coding', 'code-generation', 'productivity'],
+    longDescription: 'Your AI pair programmer that suggests whole lines or entire functions right inside your editor. Powered by OpenAI Codex.',
+    features: [
+      'Real-time suggestions',
+      'Multi-language support',
+      'Context-aware completions',
+      'Test generation',
+      'Comment-to-code',
+      'Code explanations'
+    ],
+    pricing: 'Paid',
+    verified: true
+  },
+  {
+    id: 'tabnine',
+    category: 'ai-coding',
+    name: 'Tabnine',
+    description: 'AI code completion for all languages',
+    icon: '🧠',
+    rating: 4.6,
+    reviews: 2987,
+    downloads: '198K+',
+    tags: ['ai-coding', 'code-completion', 'productivity'],
+    longDescription: 'AI-powered code completion trained on billions of lines of code. Works with all major programming languages and frameworks.',
+    features: [
+      'Smart completions',
+      'Team learning',
+      'Privacy-focused',
+      'Local mode',
+      'Multi-language support',
+      'IDE integration'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'codeium',
+    category: 'ai-coding',
+    name: 'Codeium',
+    description: 'Free AI-powered code acceleration',
+    icon: '⚡',
+    rating: 4.7,
+    reviews: 1876,
+    downloads: '143K+',
+    tags: ['ai-coding', 'code-completion', 'free'],
+    longDescription: 'Free AI code acceleration toolkit with autocomplete, natural language search, and chat assistance.',
+    features: [
+      'Intelligent autocomplete',
+      'Natural language search',
+      'Code explanations',
+      'Refactoring assistance',
+      'Multi-language support',
+      'Privacy protection'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
     id: 'docker',
     category: 'devops',
     name: 'Docker',
@@ -97,6 +186,94 @@ const INTEGRATIONS_DATA = [
       'Registry integration',
       'Image scanning',
       'Performance monitoring'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'kubernetes',
+    category: 'devops',
+    name: 'Kubernetes',
+    description: 'Kubernetes cluster management and deployment',
+    icon: '☸️',
+    rating: 4.7,
+    reviews: 2134,
+    downloads: '145K+',
+    tags: ['devops', 'orchestration', 'cloud-native'],
+    longDescription: 'Manage Kubernetes clusters, deploy applications, and monitor workloads. Full kubectl integration with visual cluster explorer.',
+    features: [
+      'Cluster management',
+      'Pod deployment',
+      'Resource monitoring',
+      'Helm charts',
+      'Namespace management',
+      'Log streaming'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'terraform',
+    category: 'devops',
+    name: 'Terraform',
+    description: 'Infrastructure as Code management',
+    icon: '🏗️',
+    rating: 4.8,
+    reviews: 1765,
+    downloads: '94K+',
+    tags: ['devops', 'iac', 'automation'],
+    longDescription: 'Manage infrastructure as code with Terraform. Plan, apply, and track infrastructure changes across cloud providers.',
+    features: [
+      'State management',
+      'Plan visualization',
+      'Module support',
+      'Cloud provider integration',
+      'Remote backends',
+      'Variable management'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'ansible',
+    category: 'devops',
+    name: 'Ansible',
+    description: 'Configuration management and automation',
+    icon: '🔧',
+    rating: 4.6,
+    reviews: 1543,
+    downloads: '78K+',
+    tags: ['devops', 'automation', 'configuration'],
+    longDescription: 'Automate configuration management, application deployment, and orchestration with Ansible playbooks.',
+    features: [
+      'Playbook execution',
+      'Inventory management',
+      'Role organization',
+      'Vault integration',
+      'Task automation',
+      'Module library'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'jenkins',
+    category: 'devops',
+    name: 'Jenkins',
+    description: 'Continuous integration and delivery server',
+    icon: '🏭',
+    rating: 4.5,
+    reviews: 2345,
+    downloads: '156K+',
+    tags: ['ci-cd', 'automation', 'devops'],
+    longDescription: 'Automate building, testing, and deploying applications with Jenkins pipelines. Extensive plugin ecosystem.',
+    features: [
+      'Pipeline as code',
+      'Build automation',
+      'Plugin integration',
+      'Distributed builds',
+      'Job scheduling',
+      'Build artifacts'
     ],
     pricing: 'Free',
     verified: true
@@ -146,6 +323,94 @@ const INTEGRATIONS_DATA = [
     verified: true
   },
   {
+    id: 'mysql',
+    category: 'database',
+    name: 'MySQL',
+    description: 'MySQL database client and tools',
+    icon: '🐬',
+    rating: 4.7,
+    reviews: 1876,
+    downloads: '89K+',
+    tags: ['database', 'sql', 'relational'],
+    longDescription: 'Connect to MySQL databases with advanced query tools, schema designer, and performance optimization features.',
+    features: [
+      'Query editor',
+      'Schema designer',
+      'Data import/export',
+      'User management',
+      'Query optimization',
+      'Backup tools'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'redis',
+    category: 'database',
+    name: 'Redis',
+    description: 'Redis in-memory data store manager',
+    icon: '🔴',
+    rating: 4.8,
+    reviews: 1234,
+    downloads: '67K+',
+    tags: ['database', 'cache', 'key-value'],
+    longDescription: 'Manage Redis databases with key browser, CLI integration, and real-time monitoring. Support for all Redis data types.',
+    features: [
+      'Key browser',
+      'CLI integration',
+      'Real-time monitoring',
+      'Pub/Sub support',
+      'Cluster management',
+      'Data visualization'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'elasticsearch',
+    category: 'database',
+    name: 'Elasticsearch',
+    description: 'Elasticsearch search and analytics engine',
+    icon: '🔍',
+    rating: 4.6,
+    reviews: 987,
+    downloads: '54K+',
+    tags: ['database', 'search', 'analytics'],
+    longDescription: 'Connect to Elasticsearch clusters for full-text search, log analytics, and data exploration. Visual query builder included.',
+    features: [
+      'Index management',
+      'Query builder',
+      'Aggregations',
+      'Mapping editor',
+      'Cluster monitoring',
+      'Bulk operations'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'supabase',
+    category: 'database',
+    name: 'Supabase',
+    description: 'Open source Firebase alternative',
+    icon: '⚡',
+    rating: 4.9,
+    reviews: 2456,
+    downloads: '134K+',
+    tags: ['database', 'backend', 'realtime'],
+    longDescription: 'Complete backend-as-a-service with PostgreSQL database, authentication, storage, and real-time subscriptions.',
+    features: [
+      'Database management',
+      'Authentication',
+      'Storage buckets',
+      'Real-time subscriptions',
+      'Edge functions',
+      'Auto-generated APIs'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
     id: 'stripe',
     category: 'payments',
     name: 'Stripe',
@@ -168,6 +433,50 @@ const INTEGRATIONS_DATA = [
     verified: true
   },
   {
+    id: 'paypal',
+    category: 'payments',
+    name: 'PayPal',
+    description: 'PayPal payment and checkout integration',
+    icon: '💰',
+    rating: 4.5,
+    reviews: 1765,
+    downloads: '98K+',
+    tags: ['payments', 'checkout', 'commerce'],
+    longDescription: 'Accept PayPal payments with smart payment buttons, subscription billing, and invoice management.',
+    features: [
+      'Payment buttons',
+      'Subscription billing',
+      'Invoice management',
+      'Dispute handling',
+      'Multi-currency support',
+      'Seller protection'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'square',
+    category: 'payments',
+    name: 'Square',
+    description: 'Square payment processing platform',
+    icon: '⬜',
+    rating: 4.6,
+    reviews: 1432,
+    downloads: '76K+',
+    tags: ['payments', 'pos', 'commerce'],
+    longDescription: 'Integrate Square payment processing for online and in-person sales. Includes inventory and customer management.',
+    features: [
+      'Payment processing',
+      'POS integration',
+      'Inventory management',
+      'Customer profiles',
+      'Invoicing',
+      'Analytics'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
     id: 'slack',
     category: 'communication',
     name: 'Slack',
@@ -187,6 +496,94 @@ const INTEGRATIONS_DATA = [
       'Message threading'
     ],
     pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'discord',
+    category: 'communication',
+    name: 'Discord',
+    description: 'Discord bot and webhook integration',
+    icon: '🎮',
+    rating: 4.7,
+    reviews: 2134,
+    downloads: '123K+',
+    tags: ['communication', 'bot', 'community'],
+    longDescription: 'Create Discord bots, send webhooks, and manage servers. Perfect for community engagement and notifications.',
+    features: [
+      'Bot creation',
+      'Webhook posting',
+      'Server management',
+      'Role automation',
+      'Message embeds',
+      'Slash commands'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'teams',
+    category: 'communication',
+    name: 'Microsoft Teams',
+    description: 'Microsoft Teams collaboration integration',
+    icon: '👥',
+    rating: 4.5,
+    reviews: 1543,
+    downloads: '87K+',
+    tags: ['communication', 'microsoft', 'enterprise'],
+    longDescription: 'Integrate with Microsoft Teams for enterprise collaboration. Send notifications, create channels, and manage teams.',
+    features: [
+      'Message posting',
+      'Team management',
+      'Channel creation',
+      'Adaptive cards',
+      'Bot framework',
+      'File sharing'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'sendgrid',
+    category: 'communication',
+    name: 'SendGrid',
+    description: 'Email delivery and marketing platform',
+    icon: '📧',
+    rating: 4.7,
+    reviews: 1987,
+    downloads: '112K+',
+    tags: ['email', 'marketing', 'transactional'],
+    longDescription: 'Send transactional and marketing emails with SendGrid. Advanced analytics and template management included.',
+    features: [
+      'Email API',
+      'Template editor',
+      'Analytics dashboard',
+      'List management',
+      'A/B testing',
+      'Webhook events'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'twilio',
+    category: 'communication',
+    name: 'Twilio',
+    description: 'SMS, voice, and video communication APIs',
+    icon: '📱',
+    rating: 4.8,
+    reviews: 2345,
+    downloads: '134K+',
+    tags: ['sms', 'voice', 'video'],
+    longDescription: 'Build communication features with Twilio APIs. Send SMS, make calls, and enable video conferencing.',
+    features: [
+      'SMS messaging',
+      'Voice calls',
+      'Video rooms',
+      'Verify API',
+      'Chat API',
+      'WhatsApp integration'
+    ],
+    pricing: 'Pay-as-you-go',
     verified: true
   },
   {
@@ -216,7 +613,7 @@ const INTEGRATIONS_DATA = [
     category: 'cloud',
     name: 'Google Cloud',
     description: 'Google Cloud Platform integration',
-    icon: '☁️',
+    icon: '🌐',
     rating: 4.6,
     reviews: 1543,
     downloads: '98K+',
@@ -231,6 +628,72 @@ const INTEGRATIONS_DATA = [
       'Kubernetes Engine'
     ],
     pricing: 'Pay-as-you-go',
+    verified: true
+  },
+  {
+    id: 'azure',
+    category: 'cloud',
+    name: 'Microsoft Azure',
+    description: 'Azure cloud platform integration',
+    icon: '🔷',
+    rating: 4.7,
+    reviews: 2134,
+    downloads: '145K+',
+    tags: ['cloud', 'microsoft', 'enterprise'],
+    longDescription: 'Deploy and manage Azure resources with full cloud platform integration. Support for VMs, containers, and serverless.',
+    features: [
+      'Virtual machines',
+      'App Services',
+      'Azure Functions',
+      'Cosmos DB',
+      'Container instances',
+      'Active Directory'
+    ],
+    pricing: 'Pay-as-you-go',
+    verified: true
+  },
+  {
+    id: 'digitalocean',
+    category: 'cloud',
+    name: 'DigitalOcean',
+    description: 'Developer-friendly cloud infrastructure',
+    icon: '🌊',
+    rating: 4.8,
+    reviews: 1876,
+    downloads: '92K+',
+    tags: ['cloud', 'hosting', 'infrastructure'],
+    longDescription: 'Simple cloud infrastructure for developers. Manage droplets, databases, and Kubernetes clusters.',
+    features: [
+      'Droplet management',
+      'Managed databases',
+      'Kubernetes clusters',
+      'Spaces storage',
+      'Load balancers',
+      'Monitoring'
+    ],
+    pricing: 'Pay-as-you-go',
+    verified: true
+  },
+  {
+    id: 'cloudflare',
+    category: 'cloud',
+    name: 'Cloudflare',
+    description: 'CDN, security, and edge computing platform',
+    icon: '🛡️',
+    rating: 4.9,
+    reviews: 2987,
+    downloads: '178K+',
+    tags: ['cdn', 'security', 'edge'],
+    longDescription: 'Global CDN, DDoS protection, and edge computing. Workers for serverless code execution at the edge.',
+    features: [
+      'CDN management',
+      'Workers deployment',
+      'DNS management',
+      'WAF rules',
+      'Analytics',
+      'Page rules'
+    ],
+    pricing: 'Freemium',
     verified: true
   },
   {
@@ -256,11 +719,33 @@ const INTEGRATIONS_DATA = [
     verified: true
   },
   {
+    id: 'netlify',
+    category: 'deployment',
+    name: 'Netlify',
+    description: 'Modern web hosting and automation platform',
+    icon: '🎯',
+    rating: 4.7,
+    reviews: 1987,
+    downloads: '143K+',
+    tags: ['deployment', 'hosting', 'jamstack'],
+    longDescription: 'Deploy static sites and serverless functions with continuous deployment from Git. Built for the Jamstack.',
+    features: [
+      'Git-based deployments',
+      'Serverless functions',
+      'Form handling',
+      'Identity management',
+      'Split testing',
+      'Analytics'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
     id: 'heroku',
     category: 'deployment',
     name: 'Heroku',
     description: 'Cloud application platform and hosting',
-    icon: '🦶',
+    icon: '💜',
     rating: 4.5,
     reviews: 1687,
     downloads: '87K+',
@@ -273,6 +758,50 @@ const INTEGRATIONS_DATA = [
       'Automatic scaling',
       'Buildpacks',
       'Pipeline management'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'railway',
+    category: 'deployment',
+    name: 'Railway',
+    description: 'Infrastructure platform for instant deployments',
+    icon: '🚂',
+    rating: 4.8,
+    reviews: 1234,
+    downloads: '67K+',
+    tags: ['deployment', 'hosting', 'infrastructure'],
+    longDescription: 'Deploy applications instantly with zero configuration. Includes databases, cron jobs, and environment management.',
+    features: [
+      'One-click deployments',
+      'Database templates',
+      'Cron jobs',
+      'Private networking',
+      'Environment variables',
+      'Usage-based pricing'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'render',
+    category: 'deployment',
+    name: 'Render',
+    description: 'Cloud platform for modern applications',
+    icon: '🎨',
+    rating: 4.7,
+    reviews: 1456,
+    downloads: '78K+',
+    tags: ['deployment', 'hosting', 'full-stack'],
+    longDescription: 'Deploy web services, static sites, and databases with automatic SSL and global CDN. Zero DevOps required.',
+    features: [
+      'Web services',
+      'Static sites',
+      'Databases',
+      'Cron jobs',
+      'Private services',
+      'Auto-scaling'
     ],
     pricing: 'Freemium',
     verified: true
@@ -295,6 +824,50 @@ const INTEGRATIONS_DATA = [
       'Scope management',
       'Access controls',
       'Analytics'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'yarn',
+    category: 'package-management',
+    name: 'Yarn',
+    description: 'Fast, reliable package manager',
+    icon: '🧶',
+    rating: 4.6,
+    reviews: 1678,
+    downloads: '98K+',
+    tags: ['package-management', 'dependencies', 'javascript'],
+    longDescription: 'Alternative package manager with improved performance and reliability. Support for workspaces and plugins.',
+    features: [
+      'Fast installs',
+      'Workspaces',
+      'Offline mode',
+      'Deterministic installs',
+      'Plugin system',
+      'Zero-installs'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'pnpm',
+    category: 'package-management',
+    name: 'pnpm',
+    description: 'Efficient package manager with disk space optimization',
+    icon: '⚡',
+    rating: 4.8,
+    reviews: 987,
+    downloads: '56K+',
+    tags: ['package-management', 'performance', 'javascript'],
+    longDescription: 'Disk space efficient package manager that uses content-addressable storage. Fast and strict dependency management.',
+    features: [
+      'Disk space optimization',
+      'Monorepo support',
+      'Strict mode',
+      'Fast installations',
+      'Workspace protocol',
+      'Peer dependencies'
     ],
     pricing: 'Free',
     verified: true
@@ -342,6 +915,336 @@ const INTEGRATIONS_DATA = [
     ],
     pricing: 'Freemium',
     verified: true
+  },
+  {
+    id: 'newrelic',
+    category: 'monitoring',
+    name: 'New Relic',
+    description: 'Observability platform for modern software',
+    icon: '📈',
+    rating: 4.6,
+    reviews: 1543,
+    downloads: '94K+',
+    tags: ['monitoring', 'apm', 'observability'],
+    longDescription: 'Full-stack observability platform with APM, infrastructure monitoring, and real user monitoring.',
+    features: [
+      'Application monitoring',
+      'Infrastructure monitoring',
+      'Browser monitoring',
+      'Mobile monitoring',
+      'Distributed tracing',
+      'Custom dashboards'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'grafana',
+    category: 'monitoring',
+    name: 'Grafana',
+    description: 'Analytics and monitoring visualization platform',
+    icon: '📉',
+    rating: 4.8,
+    reviews: 2234,
+    downloads: '145K+',
+    tags: ['monitoring', 'visualization', 'analytics'],
+    longDescription: 'Create, explore, and share dashboards with beautiful visualizations. Connect to multiple data sources.',
+    features: [
+      'Dashboard creation',
+      'Data source plugins',
+      'Alerting',
+      'Annotations',
+      'Template variables',
+      'Team collaboration'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'prometheus',
+    category: 'monitoring',
+    name: 'Prometheus',
+    description: 'Metrics monitoring and alerting toolkit',
+    icon: '🔥',
+    rating: 4.7,
+    reviews: 1765,
+    downloads: '87K+',
+    tags: ['monitoring', 'metrics', 'time-series'],
+    longDescription: 'Time-series database and monitoring system with powerful query language and built-in alerting.',
+    features: [
+      'Metric collection',
+      'PromQL queries',
+      'Service discovery',
+      'Alerting rules',
+      'Data visualization',
+      'Federation'
+    ],
+    pricing: 'Free',
+    verified: true
+  },
+  {
+    id: 'logz',
+    category: 'monitoring',
+    name: 'Logz.io',
+    description: 'Cloud-native observability platform',
+    icon: '📋',
+    rating: 4.5,
+    reviews: 876,
+    downloads: '45K+',
+    tags: ['monitoring', 'logging', 'observability'],
+    longDescription: 'Unified observability platform combining log management, infrastructure monitoring, and distributed tracing.',
+    features: [
+      'Log analytics',
+      'Infrastructure monitoring',
+      'Distributed tracing',
+      'Security analytics',
+      'Cloud SIEM',
+      'AI-powered insights'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'figma',
+    category: 'design',
+    name: 'Figma',
+    description: 'Collaborative design and prototyping tool',
+    icon: '🎨',
+    rating: 4.9,
+    reviews: 3456,
+    downloads: '234K+',
+    tags: ['design', 'collaboration', 'prototyping'],
+    longDescription: 'Design, prototype, and collaborate in real-time. Export assets and design tokens directly to code.',
+    features: [
+      'Design collaboration',
+      'Prototyping',
+      'Component libraries',
+      'Design systems',
+      'Code export',
+      'Version history'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'jira',
+    category: 'project-management',
+    name: 'Jira',
+    description: 'Project and issue tracking for teams',
+    icon: '📋',
+    rating: 4.5,
+    reviews: 2987,
+    downloads: '187K+',
+    tags: ['project-management', 'agile', 'tracking'],
+    longDescription: 'Plan, track, and manage agile software development. Scrum and Kanban boards with customizable workflows.',
+    features: [
+      'Issue tracking',
+      'Scrum boards',
+      'Kanban boards',
+      'Sprint planning',
+      'Custom workflows',
+      'Reporting'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'trello',
+    category: 'project-management',
+    name: 'Trello',
+    description: 'Visual collaboration and project boards',
+    icon: '📊',
+    rating: 4.6,
+    reviews: 2543,
+    downloads: '156K+',
+    tags: ['project-management', 'kanban', 'collaboration'],
+    longDescription: 'Organize projects with boards, lists, and cards. Simple and visual project management for teams.',
+    features: [
+      'Kanban boards',
+      'Card management',
+      'Power-ups',
+      'Automation',
+      'Team collaboration',
+      'Mobile apps'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'asana',
+    category: 'project-management',
+    name: 'Asana',
+    description: 'Work management platform for teams',
+    icon: '✅',
+    rating: 4.7,
+    reviews: 2134,
+    downloads: '143K+',
+    tags: ['project-management', 'tasks', 'collaboration'],
+    longDescription: 'Organize and plan work with projects, tasks, and timelines. Track progress and collaborate with your team.',
+    features: [
+      'Task management',
+      'Timeline view',
+      'Portfolios',
+      'Workload management',
+      'Automation rules',
+      'Integrations'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'notion',
+    category: 'productivity',
+    name: 'Notion',
+    description: 'All-in-one workspace for notes and docs',
+    icon: '📝',
+    rating: 4.8,
+    reviews: 3987,
+    downloads: '267K+',
+    tags: ['productivity', 'documentation', 'collaboration'],
+    longDescription: 'Write, plan, and get organized in one place. Notion is your all-in-one workspace for notes, docs, and wikis.',
+    features: [
+      'Documents',
+      'Databases',
+      'Wikis',
+      'Templates',
+      'Collaboration',
+      'API access'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'linear',
+    category: 'project-management',
+    name: 'Linear',
+    description: 'Streamlined issue tracking for software teams',
+    icon: '⚡',
+    rating: 4.9,
+    reviews: 1876,
+    downloads: '92K+',
+    tags: ['project-management', 'issue-tracking', 'development'],
+    longDescription: 'Purpose-built issue tracker for software teams. Fast, keyboard-first, and beautifully designed.',
+    features: [
+      'Issue tracking',
+      'Roadmaps',
+      'Cycles',
+      'Git integration',
+      'Keyboard shortcuts',
+      'Slack integration'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'auth0',
+    category: 'authentication',
+    name: 'Auth0',
+    description: 'Authentication and authorization platform',
+    icon: '🔐',
+    rating: 4.7,
+    reviews: 2345,
+    downloads: '156K+',
+    tags: ['authentication', 'security', 'identity'],
+    longDescription: 'Add authentication and authorization to your applications. Support for social logins, SSO, and MFA.',
+    features: [
+      'Social authentication',
+      'Single sign-on',
+      'Multi-factor auth',
+      'User management',
+      'Role-based access',
+      'Identity providers'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'firebase',
+    category: 'backend',
+    name: 'Firebase',
+    description: 'Google\'s app development platform',
+    icon: '🔥',
+    rating: 4.8,
+    reviews: 3456,
+    downloads: '245K+',
+    tags: ['backend', 'database', 'realtime'],
+    longDescription: 'Complete app development platform with authentication, database, storage, hosting, and analytics.',
+    features: [
+      'Realtime database',
+      'Authentication',
+      'Cloud storage',
+      'Hosting',
+      'Cloud functions',
+      'Analytics'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'contentful',
+    category: 'cms',
+    name: 'Contentful',
+    description: 'API-first content management platform',
+    icon: '📰',
+    rating: 4.6,
+    reviews: 1543,
+    downloads: '87K+',
+    tags: ['cms', 'content', 'headless'],
+    longDescription: 'Headless CMS for creating, managing, and delivering content to any platform via APIs.',
+    features: [
+      'Content modeling',
+      'API delivery',
+      'Rich text editor',
+      'Media management',
+      'Localization',
+      'Webhooks'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'sanity',
+    category: 'cms',
+    name: 'Sanity',
+    description: 'Platform for structured content',
+    icon: '✨',
+    rating: 4.8,
+    reviews: 1234,
+    downloads: '76K+',
+    tags: ['cms', 'content', 'headless'],
+    longDescription: 'Unified content platform with real-time collaboration and customizable editing environment.',
+    features: [
+      'Real-time editing',
+      'Custom schemas',
+      'GROQ queries',
+      'Image pipeline',
+      'Collaborative editing',
+      'Version control'
+    ],
+    pricing: 'Freemium',
+    verified: true
+  },
+  {
+    id: 'algolia',
+    category: 'search',
+    name: 'Algolia',
+    description: 'Fast and relevant search API',
+    icon: '🔎',
+    rating: 4.7,
+    reviews: 1876,
+    downloads: '123K+',
+    tags: ['search', 'api', 'performance'],
+    longDescription: 'Powerful search API with typo-tolerance, faceting, and instant results. Build delightful search experiences.',
+    features: [
+      'Instant search',
+      'Typo tolerance',
+      'Faceted search',
+      'Geo search',
+      'Analytics',
+      'AI-powered ranking'
+    ],
+    pricing: 'Freemium',
+    verified: true
   }
 ];
 
@@ -356,7 +1259,14 @@ const CATEGORIES = [
   { id: 'cloud', label: 'Cloud Platforms' },
   { id: 'deployment', label: 'Deployment' },
   { id: 'package-management', label: 'Packages' },
-  { id: 'monitoring', label: 'Monitoring' }
+  { id: 'monitoring', label: 'Monitoring' },
+  { id: 'design', label: 'Design' },
+  { id: 'project-management', label: 'Project Management' },
+  { id: 'productivity', label: 'Productivity' },
+  { id: 'authentication', label: 'Authentication' },
+  { id: 'backend', label: 'Backend' },
+  { id: 'cms', label: 'CMS' },
+  { id: 'search', label: 'Search' }
 ];
 
 export default function IntegrationsPage() {
@@ -486,7 +1396,7 @@ export default function IntegrationsPage() {
                 onValueChange={setSelectedCategory}
                 className="w-full"
               >
-                <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 w-full bg-transparent mb-6 h-auto p-0">
+                <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 w-full bg-transparent mb-6 h-auto p-0">
                   {CATEGORIES.map(category => (
                     <TabsTrigger
                       key={category.id}
