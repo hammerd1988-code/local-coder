@@ -9,8 +9,12 @@ const router = Router();
 const terminals = new Map<string, any>();
 
 export function setupTerminalWebSocket(wss: WebSocketServer) {
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('Terminal WebSocket client connected');
+  wss.on('connection', (ws: WebSocket, req) => {
+    // Extract terminal ID from query string
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const terminalIdFromQuery = url.searchParams.get('id') || Math.random().toString(36).substring(7);
+    
+    console.log('Terminal WebSocket client connected:', terminalIdFromQuery);
     websocketConnectionsActive.labels('terminal').inc();
     terminalSessionsTotal.labels('created').inc();
 
@@ -68,11 +72,10 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
       });
     }
 
-    const terminalId = Math.random().toString(36).substring(7);
-    terminals.set(terminalId, ptyProcess);
+    terminals.set(terminalIdFromQuery, ptyProcess);
     terminalSessionsActive.set(terminals.size);
 
-    console.log('Terminal process spawned:', terminalId);
+    console.log('Terminal process spawned:', terminalIdFromQuery);
 
     // Send data from PTY to WebSocket
     ptyProcess.onData((data: string) => {
@@ -89,8 +92,8 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
 
     // Handle terminal exit
     ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
-      console.log('Terminal process exited:', exitCode, signal);
-      terminals.delete(terminalId);
+      console.log('Terminal process exited:', terminalIdFromQuery, exitCode, signal);
+      terminals.delete(terminalIdFromQuery);
       terminalSessionsActive.set(terminals.size);
       terminalSessionsTotal.labels('exited').inc();
       ws.close();
@@ -127,18 +130,18 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     });
 
     ws.on('close', () => {
-      console.log('Terminal WebSocket client disconnected');
+      console.log('Terminal WebSocket client disconnected:', terminalIdFromQuery);
       ptyProcess.kill();
-      terminals.delete(terminalId);
+      terminals.delete(terminalIdFromQuery);
       terminalSessionsActive.set(terminals.size);
       websocketConnectionsActive.labels('terminal').dec();
       terminalSessionsTotal.labels('closed').inc();
     });
 
     ws.on('error', (error) => {
-      console.error('Terminal WebSocket error:', error);
+      console.error('Terminal WebSocket error:', terminalIdFromQuery, error);
       ptyProcess.kill();
-      terminals.delete(terminalId);
+      terminals.delete(terminalIdFromQuery);
       terminalSessionsActive.set(terminals.size);
       websocketConnectionsActive.labels('terminal').dec();
       terminalSessionsTotal.labels('error').inc();

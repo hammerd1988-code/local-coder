@@ -1,130 +1,201 @@
 import * as React from 'react';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Plus, X } from 'lucide-react';
+import Terminal from './Terminal';
+import { Button } from './ui/button';
+
+interface TerminalTab {
+  id: string;
+  title: string;
+}
+
+function SortableTab({ tab, isActive, onSelect, onClose, tabCount }: {
+  tab: TerminalTab;
+  isActive: boolean;
+  onSelect: () => void;
+  onClose: () => void;
+  tabCount: number;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: tab.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-2 px-3 py-1.5 text-xs font-mono border-r border-cyan-500/30 cursor-pointer transition-all ${
+        isActive 
+          ? 'bg-gradient-to-b from-cyan-500/20 to-purple-500/20 text-cyan-400 border-b-2 border-b-cyan-400' 
+          : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10'
+      }`}
+      onClick={onSelect}
+    >
+      <div {...attributes} {...listeners} className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></div>
+        <span>{tab.title}</span>
+      </div>
+      {tabCount > 1 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function TerminalPanel() {
-  const terminalRef = React.useRef<HTMLDivElement>(null);
-  const xtermRef = React.useRef<Terminal | null>(null);
-  const fitAddonRef = React.useRef<FitAddon | null>(null);
-  const socketRef = React.useRef<WebSocket | null>(null);
+  const [tabs, setTabs] = React.useState<TerminalTab[]>([
+    { id: 'terminal-1', title: 'Terminal 1' }
+  ]);
+  const [activeTabId, setActiveTabId] = React.useState('terminal-1');
+  const tabCounterRef = React.useRef(1);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTabs((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
+
+  function addNewTab() {
+    tabCounterRef.current += 1;
+    const newTab: TerminalTab = {
+      id: `terminal-${tabCounterRef.current}`,
+      title: `Terminal ${tabCounterRef.current}`
+    };
+    setTabs((prev) => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+  }
+
+  function closeTab(id: string) {
+    if (tabs.length === 1) return;
+    
+    const tabIndex = tabs.findIndex(t => t.id === id);
+    const newTabs = tabs.filter(t => t.id !== id);
+    setTabs(newTabs);
+    
+    if (activeTabId === id) {
+      const newActiveIndex = Math.min(tabIndex, newTabs.length - 1);
+      setActiveTabId(newTabs[newActiveIndex].id);
+    }
+  }
+
+  function switchToNextTab() {
+    const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+    const nextIndex = (currentIndex + 1) % tabs.length;
+    setActiveTabId(tabs[nextIndex].id);
+  }
+
+  function switchToPrevTab() {
+    const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+    const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
+    setActiveTabId(tabs[prevIndex].id);
+  }
+
+  // Keyboard shortcuts
   React.useEffect(() => {
-    if (!terminalRef.current) return;
-
-    const term = new Terminal({
-      cursorBlink: true,
-      fontSize: 13,
-      fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
-      theme: {
-        background: '#0a0a0f',
-        foreground: '#00ffff',
-        cursor: '#ff00ff',
-        black: '#000000',
-        red: '#ff0055',
-        green: '#00ff88',
-        yellow: '#ffaa00',
-        blue: '#0088ff',
-        magenta: '#ff00ff',
-        cyan: '#00ffff',
-        white: '#ffffff',
-        brightBlack: '#555555',
-        brightRed: '#ff5588',
-        brightGreen: '#88ffaa',
-        brightYellow: '#ffcc55',
-        brightBlue: '#5599ff',
-        brightMagenta: '#ff55ff',
-        brightCyan: '#55ffff',
-        brightWhite: '#ffffff',
-      },
-    });
-
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(terminalRef.current);
-    fitAddon.fit();
-
-    xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
-
-    // Connect to websocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/terminal`);
-    socketRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('Terminal WebSocket connected');
-      term.writeln('\\x1b[1;36m╔═══════════════════════════════════════════════════════════╗\\x1b[0m');
-      term.writeln('\\x1b[1;36m║   LOCAL.CODE Terminal v2.0.0                             ║\\x1b[0m');
-      term.writeln('\\x1b[1;36m║   Enhanced with command aliases & real-time feedback    ║\\x1b[0m');
-      term.writeln('\\x1b[1;36m╚═══════════════════════════════════════════════════════════╝\\x1b[0m');
-      term.writeln('');
-      term.writeln('\\x1b[1;33m✨ Quick Aliases Available:\\x1b[0m');
-      term.writeln('  \\x1b[36mll\\x1b[0m = ls -lah  │  \\x1b[36m..\\x1b[0m = cd ..  │  \\x1b[36mcls\\x1b[0m = clear');
-      term.writeln('  \\x1b[35mg\\x1b[0m = git  │  \\x1b[35mgs\\x1b[0m = git status  │  \\x1b[35mgl\\x1b[0m = git log');
-      term.writeln('  \\x1b[32mn\\x1b[0m = npm  │  \\x1b[32mni\\x1b[0m = npm install  │  \\x1b[32mnr\\x1b[0m = npm run');
-      term.writeln('');
-    };
-
-    ws.onmessage = (event) => {
-      term.write(event.data);
-    };
-
-    ws.onerror = (error) => {
-      console.error('Terminal WebSocket error:', error);
-      term.writeln('\r\n\x1b[1;31mWebSocket connection error\x1b[0m\r\n');
-    };
-
-    ws.onclose = () => {
-      console.log('Terminal WebSocket disconnected');
-      term.writeln('\r\n\x1b[1;33mConnection closed. Refresh to reconnect.\x1b[0m\r\n');
-    };
-
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
+    function handleKeyDown(e: KeyboardEvent) {
+      // Ctrl+T: New tab
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault();
+        addNewTab();
       }
-    });
-
-    // Handle resize
-    const handleResize = () => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-        if (ws.readyState === WebSocket.OPEN && xtermRef.current) {
-          ws.send(JSON.stringify({
-            type: 'resize',
-            cols: xtermRef.current.cols,
-            rows: xtermRef.current.rows
-          }));
-        }
+      // Ctrl+W: Close tab
+      if (e.ctrlKey && e.key === 'w' && tabs.length > 1) {
+        e.preventDefault();
+        closeTab(activeTabId);
       }
-    };
-
-    window.addEventListener('resize', handleResize);
-    const resizeObserver = new ResizeObserver(handleResize);
-    if (terminalRef.current) {
-      resizeObserver.observe(terminalRef.current);
+      // Ctrl+Tab: Next tab
+      if (e.ctrlKey && e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        switchToNextTab();
+      }
+      // Ctrl+Shift+Tab: Previous tab
+      if (e.ctrlKey && e.shiftKey && e.key === 'Tab') {
+        e.preventDefault();
+        switchToPrevTab();
+      }
     }
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
-      ws.close();
-      term.dispose();
-    };
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tabs, activeTabId]);
 
   return (
     <div className="h-full flex flex-col bg-black/80 backdrop-blur-sm border-l border-cyan-500/30">
-      <div className="h-10 border-b border-cyan-500/30 flex items-center px-4 bg-gradient-to-r from-purple-900/30 to-cyan-900/30">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg shadow-red-500/50 animate-pulse"></div>
-          <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-lg shadow-yellow-500/50"></div>
-          <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50"></div>
-          <span className="ml-2 text-xs font-mono text-cyan-400">$ TERMINAL</span>
-        </div>
+      <div className="h-10 border-b border-cyan-500/30 flex items-center bg-gradient-to-r from-purple-900/30 to-cyan-900/30">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex items-center flex-1 overflow-x-auto">
+            <SortableContext items={tabs.map(t => t.id)} strategy={horizontalListSortingStrategy}>
+              {tabs.map((tab) => (
+                <SortableTab
+                  key={tab.id}
+                  tab={tab}
+                  isActive={tab.id === activeTabId}
+                  onSelect={() => setActiveTabId(tab.id)}
+                  onClose={() => closeTab(tab.id)}
+                  tabCount={tabs.length}
+                />
+              ))}
+            </SortableContext>
+          </div>
+        </DndContext>
+        
+        <Button
+          onClick={addNewTab}
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 mx-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20"
+          title="New Terminal (Ctrl+T)"
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
-      <div ref={terminalRef} className="flex-1 p-2 overflow-hidden"></div>
+      
+      <div className="flex-1 relative">
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={`absolute inset-0 ${tab.id === activeTabId ? 'block' : 'hidden'}`}
+          >
+            <Terminal terminalId={tab.id} isActive={tab.id === activeTabId} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
