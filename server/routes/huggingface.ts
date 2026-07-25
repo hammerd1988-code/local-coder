@@ -397,4 +397,66 @@ router.get('/token', async (_req, res) => {
   }
 });
 
+// Generate MCP server configuration files
+router.post('/generate-mcp', async (req, res) => {
+  try {
+    const { model_id, config } = req.body;
+
+    if (!model_id) {
+      res.status(400).json({ error: 'Missing model_id' });
+      return;
+    }
+
+    // Fetch model details
+    const model = await db
+      .selectFrom('huggingface_models')
+      .selectAll()
+      .where('id', '=', model_id)
+      .executeTakeFirst();
+
+    if (!model) {
+      res.status(404).json({ error: 'Model not found' });
+      return;
+    }
+
+    // Generate MCP server configuration
+    const mcpConfig = {
+      mcpServers: {
+        [model.model_name]: {
+          command: 'python',
+          args: ['-m', 'mcp_server_huggingface'],
+          env: {
+            MODEL_PATH: model.local_path,
+            MODEL_ID: model.model_id,
+            MODEL_TYPE: model.model_type,
+            TEMPERATURE: String(config?.temperature || 0.7),
+            MAX_TOKENS: String(config?.maxTokens || 512),
+            TOP_P: String(config?.topP || 0.9),
+            TOP_K: String(config?.topK || 50),
+            REPETITION_PENALTY: String(config?.repetitionPenalty || 1.0),
+            BATCH_SIZE: String(config?.batchSize || 1)
+          }
+        }
+      }
+    };
+
+    // Save configuration files to model directory
+    const configPath = path.join(model.local_path!, 'mcp_config.json');
+    fs.writeFileSync(configPath, JSON.stringify(mcpConfig, null, 2));
+
+    console.log('MCP configuration generated:', model.model_id);
+
+    res.json({ 
+      success: true,
+      config: mcpConfig,
+      config_path: configPath
+    });
+    return;
+  } catch (error) {
+    console.error('Error generating MCP config:', error);
+    res.status(500).json({ error: 'Failed to generate MCP configuration' });
+    return;
+  }
+});
+
 export default router;

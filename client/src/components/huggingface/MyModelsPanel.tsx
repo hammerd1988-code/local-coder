@@ -3,7 +3,8 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
-import { Trash2, Check, Loader2, Database, Play, RefreshCw, Box } from 'lucide-react';
+import { Trash2, Check, Loader2, Database, Play, RefreshCw, Box, Settings } from 'lucide-react';
+import ModelUsagePanel from './ModelUsagePanel';
 
 interface DownloadedModel {
   id: number;
@@ -28,6 +29,8 @@ interface MyModelsPanelProps {
   onRefresh: () => void;
 }
 
+type ViewMode = 'list' | 'usage';
+
 export default function MyModelsPanel({ 
   models, 
   selectedModel, 
@@ -35,6 +38,8 @@ export default function MyModelsPanel({
   onDeleteModel,
   onRefresh 
 }: MyModelsPanelProps) {
+  const [viewMode, setViewMode] = React.useState<ViewMode>('list');
+
   function formatDate(timestamp: number | null): string {
     if (!timestamp) return 'N/A';
     return new Date(timestamp * 1000).toLocaleDateString();
@@ -44,6 +49,11 @@ export default function MyModelsPanel({
     if (!mb) return 'N/A';
     if (mb >= 1000) return `${(mb / 1000).toFixed(1)} GB`;
     return `${mb} MB`;
+  }
+
+  function handleUseModel(model: DownloadedModel) {
+    onSelectModel(model);
+    setViewMode('usage');
   }
 
   function getStatusBadge(status: string) {
@@ -68,6 +78,38 @@ export default function MyModelsPanel({
         <Box className="w-12 h-12 text-gray-600 mx-auto mb-3" />
         <p className="text-gray-400 mb-2">No models downloaded yet</p>
         <p className="text-sm text-gray-500">Browse and download models to get started</p>
+      </div>
+    );
+  }
+
+  // Show usage panel if a model is selected and in usage mode
+  if (viewMode === 'usage' && selectedModel) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Button
+              onClick={() => setViewMode('list')}
+              size="sm"
+              variant="ghost"
+              className="text-cyan-400 hover:text-cyan-300 mb-2"
+            >
+              ← Back to Models
+            </Button>
+            <h3 className="text-lg font-semibold text-white">{selectedModel.model_name}</h3>
+            <p className="text-sm text-gray-400">{selectedModel.model_id}</p>
+          </div>
+          <Button
+            onClick={onRefresh}
+            size="sm"
+            variant="ghost"
+            className="text-cyan-400 hover:text-cyan-300"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
+        </div>
+        <ModelUsagePanel model={selectedModel} />
       </div>
     );
   }
@@ -159,11 +201,15 @@ export default function MyModelsPanel({
                         )}
                         <div className="flex gap-2 mt-3">
                           <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUseModel(model);
+                            }}
                             size="sm"
                             className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-black"
                           >
-                            <Play className="w-4 h-4 mr-1" />
-                            Use in MCP Server
+                            <Settings className="w-4 h-4 mr-1" />
+                            Configure & Use
                           </Button>
                           <Button
                             onClick={(e) => {
