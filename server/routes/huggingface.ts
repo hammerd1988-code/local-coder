@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import { listModels, downloadFile } from '@huggingface/hub';
 
 const router = express.Router();
 
@@ -12,6 +13,20 @@ const modelsDirectory = path.join(dataDirectory, "huggingface-models");
 // Ensure models directory exists
 if (!fs.existsSync(modelsDirectory)) {
   fs.mkdirSync(modelsDirectory, { recursive: true });
+}
+
+// Get Hugging Face API token from environment or settings
+async function getHFToken(): Promise<string | undefined> {
+  try {
+    const setting = await db
+      .selectFrom('settings')
+      .select('value')
+      .where('key', '=', 'huggingface_token')
+      .executeTakeFirst();
+    return setting?.value || process.env.HUGGINGFACE_TOKEN;
+  } catch {
+    return process.env.HUGGINGFACE_TOKEN;
+  }
 }
 
 // Get all downloaded models
@@ -36,133 +51,50 @@ router.get('/models', async (_req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { query, type = 'all', limit = 20 } = req.query;
+    const token = await getHFToken();
     
-    // Mock search results - in production, this would call HuggingFace API
-    const mockResults = [
-      {
-        id: 'meta-llama/Llama-2-7b-chat-hf',
-        name: 'Llama 2 7B Chat',
-        type: 'text-generation',
-        description: 'Meta\'s Llama 2 7B parameter model fine-tuned for chat applications',
-        downloads: 1250000,
-        likes: 45600,
-        size_mb: 13500,
-        tags: ['llm', 'conversational', 'meta']
-      },
-      {
-        id: 'openai/whisper-large-v3',
-        name: 'Whisper Large V3',
-        type: 'automatic-speech-recognition',
-        description: 'OpenAI\'s Whisper large model for speech recognition',
-        downloads: 876000,
-        likes: 32400,
-        size_mb: 2900,
-        tags: ['audio', 'speech-to-text', 'multilingual']
-      },
-      {
-        id: 'stabilityai/stable-diffusion-xl-base-1.0',
-        name: 'Stable Diffusion XL',
-        type: 'text-to-image',
-        description: 'SDXL base model for high-quality image generation',
-        downloads: 2340000,
-        likes: 67800,
-        size_mb: 6700,
-        tags: ['diffusion', 'image-generation', 'art']
-      },
-      {
-        id: 'sentence-transformers/all-MiniLM-L6-v2',
-        name: 'MiniLM-L6 Sentence Embeddings',
-        type: 'sentence-similarity',
-        description: 'Fast and efficient sentence embedding model',
-        downloads: 3450000,
-        likes: 12300,
-        size_mb: 90,
-        tags: ['embeddings', 'similarity', 'nlp']
-      },
-      {
-        id: 'facebook/bart-large-cnn',
-        name: 'BART Large CNN',
-        type: 'summarization',
-        description: 'BART model fine-tuned for text summarization',
-        downloads: 654000,
-        likes: 8900,
-        size_mb: 1600,
-        tags: ['summarization', 'nlp', 'facebook']
-      },
-      {
-        id: 'bert-base-uncased',
-        name: 'BERT Base Uncased',
-        type: 'fill-mask',
-        description: 'Base BERT model for masked language modeling',
-        downloads: 5670000,
-        likes: 23400,
-        size_mb: 440,
-        tags: ['bert', 'nlp', 'base-model']
-      },
-      {
-        id: 'microsoft/phi-2',
-        name: 'Phi-2',
-        type: 'text-generation',
-        description: 'Microsoft\'s small language model with 2.7B parameters',
-        downloads: 456000,
-        likes: 15600,
-        size_mb: 5400,
-        tags: ['llm', 'small-model', 'efficient']
-      },
-      {
-        id: 'google/flan-t5-large',
-        name: 'FLAN-T5 Large',
-        type: 'text2text-generation',
-        description: 'Google\'s instruction-tuned T5 model',
-        downloads: 789000,
-        likes: 19200,
-        size_mb: 3000,
-        tags: ['instruction-following', 'google', 't5']
-      },
-      {
-        id: 'runwayml/stable-diffusion-v1-5',
-        name: 'Stable Diffusion v1.5',
-        type: 'text-to-image',
-        description: 'Popular SD 1.5 model for image generation',
-        downloads: 4560000,
-        likes: 89000,
-        size_mb: 4000,
-        tags: ['diffusion', 'image-generation']
-      },
-      {
-        id: 'distilbert-base-uncased',
-        name: 'DistilBERT Base',
-        type: 'fill-mask',
-        description: 'Distilled version of BERT, faster and lighter',
-        downloads: 2340000,
-        likes: 11200,
-        size_mb: 260,
-        tags: ['bert', 'distilled', 'efficient']
-      }
-    ];
-
-    let results = mockResults;
-
-    // Filter by query
-    if (query && typeof query === 'string') {
-      const q = query.toLowerCase();
-      results = results.filter(m => 
-        m.name.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q) ||
-        m.tags.some(t => t.includes(q))
-      );
-    }
-
-    // Filter by type
-    if (type !== 'all') {
-      results = results.filter(m => m.type === type);
-    }
-
-    // Apply limit
+    const searchQuery = query && typeof query === 'string' ? query : '';
     const limitNum = typeof limit === 'string' ? parseInt(limit) : 20;
-    results = results.slice(0, limitNum);
 
-    res.json(results);
+    console.log('Searching HuggingFace models:', { query: searchQuery, type, limit: limitNum });
+
+    // Build search parameters
+    const searchParams: any = {
+      limit: limitNum,
+    };
+
+    if (searchQuery) {
+      searchParams.search = searchQuery;
+    }
+
+    if (type !== 'all' && typeof type === 'string') {
+      searchParams.filter = type;
+    }
+
+    if (token) {
+      searchParams.credentials = { accessToken: token };
+    }
+
+    // Search models using Hugging Face API
+    const models = [];
+    for await (const model of listModels(searchParams)) {
+      const modelData: any = model;
+      models.push({
+        id: model.id,
+        name: model.id.split('/').pop() || model.id,
+        type: modelData.pipeline_tag || 'unknown',
+        description: modelData.cardData?.base_model || `Model: ${model.id}`,
+        downloads: model.downloads || 0,
+        likes: model.likes || 0,
+        size_mb: 0, // Size not available in list API
+        tags: modelData.tags || []
+      });
+
+      if (models.length >= limitNum) break;
+    }
+
+    console.log(`Found ${models.length} models from HuggingFace`);
+    res.json(models);
     return;
   } catch (error) {
     console.error('Error searching models:', error);
@@ -214,17 +146,71 @@ router.post('/download', async (req, res) => {
 
     console.log('Model download started:', model_id);
 
-    // Simulate download (in production, this would download from HuggingFace)
-    setTimeout(async () => {
+    // Start actual download from HuggingFace in background
+    (async () => {
       try {
+        const token = await getHFToken();
+        
         // Create model directory
         if (!fs.existsSync(localPath)) {
           fs.mkdirSync(localPath, { recursive: true });
         }
 
-        // Create a placeholder file
-        const placeholderPath = path.join(localPath, 'model.bin');
-        fs.writeFileSync(placeholderPath, `Model: ${model_name}\nID: ${model_id}\nDownloaded at: ${new Date().toISOString()}`);
+        // Download model files from HuggingFace Hub
+        console.log(`Downloading model files for ${model_id}...`);
+        
+        // Common model files to download
+        const filesToDownload = [
+          'config.json',
+          'tokenizer.json',
+          'tokenizer_config.json',
+          'pytorch_model.bin',
+          'model.safetensors',
+          'vocab.txt',
+          'vocab.json',
+          'merges.txt',
+          'special_tokens_map.json'
+        ];
+
+        let downloadedCount = 0;
+        const credentials = token ? { accessToken: token } : undefined;
+
+        for (const filename of filesToDownload) {
+          try {
+            const downloadedFile = await downloadFile({
+              repo: model_id,
+              path: filename,
+              credentials
+            });
+
+            if (downloadedFile) {
+              const destPath = path.join(localPath, filename);
+              const buffer = await downloadedFile.arrayBuffer();
+              fs.writeFileSync(destPath, Buffer.from(buffer));
+              downloadedCount++;
+              
+              // Update progress
+              const progress = Math.floor((downloadedCount / filesToDownload.length) * 100);
+              await db
+                .updateTable('huggingface_models')
+                .set({
+                  download_progress: progress,
+                  updated_at: Math.floor(Date.now() / 1000)
+                })
+                .where('model_id', '=', model_id)
+                .execute();
+              
+              console.log(`Downloaded ${filename} (${downloadedCount}/${filesToDownload.length})`);
+            }
+          } catch (fileError) {
+            // File might not exist for this model, continue
+            console.log(`Skipping ${filename} - not found or not accessible`);
+          }
+        }
+
+        if (downloadedCount === 0) {
+          throw new Error('No model files could be downloaded');
+        }
 
         // Update status to completed
         await db
@@ -238,7 +224,7 @@ router.post('/download', async (req, res) => {
           .where('model_id', '=', model_id)
           .execute();
 
-        console.log('Model download completed:', model_id);
+        console.log(`Model download completed: ${model_id} (${downloadedCount} files)`);
       } catch (error) {
         console.error('Error completing download:', error);
         await db
@@ -250,7 +236,7 @@ router.post('/download', async (req, res) => {
           .where('model_id', '=', model_id)
           .execute();
       }
-    }, 3000);
+    })();
 
     res.json({ 
       success: true, 
@@ -346,6 +332,69 @@ router.get('/types', (_req, res) => {
 
   res.json(types);
   return;
+});
+
+// Save HuggingFace API token
+router.post('/token', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token || typeof token !== 'string') {
+      res.status(400).json({ error: 'Invalid token' });
+      return;
+    }
+
+    // Save or update token in settings
+    const existing = await db
+      .selectFrom('settings')
+      .select('key')
+      .where('key', '=', 'huggingface_token')
+      .executeTakeFirst();
+
+    if (existing) {
+      await db
+        .updateTable('settings')
+        .set({
+          value: token,
+          updated_at: Math.floor(Date.now() / 1000)
+        })
+        .where('key', '=', 'huggingface_token')
+        .execute();
+    } else {
+      await db
+        .insertInto('settings')
+        .values({
+          key: 'huggingface_token',
+          value: token,
+          updated_at: Math.floor(Date.now() / 1000)
+        })
+        .execute();
+    }
+
+    console.log('HuggingFace token saved');
+    res.json({ success: true });
+    return;
+  } catch (error) {
+    console.error('Error saving token:', error);
+    res.status(500).json({ error: 'Failed to save token' });
+    return;
+  }
+});
+
+// Get HuggingFace API token status
+router.get('/token', async (_req, res) => {
+  try {
+    const token = await getHFToken();
+    res.json({ 
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 6)}...` : null
+    });
+    return;
+  } catch (error) {
+    console.error('Error fetching token:', error);
+    res.status(500).json({ error: 'Failed to fetch token status' });
+    return;
+  }
 });
 
 export default router;

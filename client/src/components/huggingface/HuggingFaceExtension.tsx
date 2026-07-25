@@ -4,7 +4,8 @@ import { Input } from '../ui/input';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Search, Download, Trash2, Check, Loader2, Database, Box } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Search, Download, Trash2, Check, Loader2, Database, Box, Key, Settings } from 'lucide-react';
 import ModelCard from './ModelCard';
 import MyModelsPanel from './MyModelsPanel';
 
@@ -48,11 +49,16 @@ export default function HuggingFaceExtension() {
   const [myModels, setMyModels] = React.useState<DownloadedModel[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [selectedModel, setSelectedModel] = React.useState<DownloadedModel | null>(null);
+  const [apiToken, setApiToken] = React.useState('');
+  const [hasToken, setHasToken] = React.useState(false);
+  const [tokenDialogOpen, setTokenDialogOpen] = React.useState(false);
+  const [savingToken, setSavingToken] = React.useState(false);
 
   // Fetch model types on mount
   React.useEffect(() => {
     fetchModelTypes();
     fetchMyModels();
+    fetchTokenStatus();
   }, []);
 
   async function fetchModelTypes() {
@@ -137,6 +143,39 @@ export default function HuggingFaceExtension() {
     }
   }
 
+  async function fetchTokenStatus() {
+    try {
+      const response = await fetch('/api/huggingface/token');
+      const data = await response.json();
+      setHasToken(data.hasToken);
+    } catch (error) {
+      console.error('Error fetching token status:', error);
+    }
+  }
+
+  async function handleSaveToken() {
+    if (!apiToken.trim()) return;
+    
+    setSavingToken(true);
+    try {
+      const response = await fetch('/api/huggingface/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: apiToken })
+      });
+
+      if (response.ok) {
+        setHasToken(true);
+        setTokenDialogOpen(false);
+        setApiToken('');
+      }
+    } catch (error) {
+      console.error('Error saving token:', error);
+    } finally {
+      setSavingToken(false);
+    }
+  }
+
   function handleKeyPress(e: React.KeyboardEvent) {
     if (e.key === 'Enter') {
       handleSearch();
@@ -152,10 +191,59 @@ export default function HuggingFaceExtension() {
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
             <span className="text-2xl">🤗</span>
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-lg font-bold text-white">Hugging Face</h2>
             <p className="text-xs text-gray-400">Browse and download AI models</p>
           </div>
+          <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={hasToken 
+                  ? "border-green-500/50 text-green-400 hover:bg-green-500/10" 
+                  : "border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                }
+              >
+                <Key className="w-4 h-4 mr-1" />
+                {hasToken ? 'Token Set' : 'API Token'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-900 border-cyan-500/30">
+              <DialogHeader>
+                <DialogTitle className="text-white">Hugging Face API Token</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Enter your Hugging Face API token to access private models and increase rate limits.
+                  Get your token from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">huggingface.co/settings/tokens</a>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <Input
+                  type="password"
+                  placeholder="hf_..."
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="bg-gray-800 border-cyan-500/30 text-white"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setTokenDialogOpen(false)}
+                    className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveToken}
+                    disabled={savingToken || !apiToken.trim()}
+                    className="bg-cyan-500 hover:bg-cyan-600 text-black"
+                  >
+                    {savingToken ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Token'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
