@@ -10,7 +10,7 @@ import GitPanel from '../components/GitPanel';
 import TerminalPanel from '../components/TerminalPanel';
 import RepoCloner from '../components/RepoCloner';
 import { Button } from '../components/ui/button';
-import { Activity } from 'lucide-react';
+import { Activity, Plug } from 'lucide-react';
 
 export default function EditorPage() {
   const navigate = useNavigate();
@@ -103,14 +103,22 @@ export default function EditorPage() {
           >
             TERMINAL
           </Button>
-          <Button
-            onClick={() => navigate('/metrics')}
-            variant="ghost"
-            className="text-xs font-mono text-gray-400 hover:text-green-400 gap-2"
-          >
-            <Activity className="w-4 h-4" />
-            METRICS
-          </Button>
+           <Button
+             onClick={() => navigate('/integrations')}
+             variant="ghost"
+             className="text-xs font-mono text-gray-400 hover:text-cyan-400 gap-2"
+           >
+             <Plug className="w-4 h-4" />
+             INTEGRATIONS
+           </Button>
+           <Button
+             onClick={() => navigate('/metrics')}
+             variant="ghost"
+             className="text-xs font-mono text-gray-400 hover:text-green-400 gap-2"
+           >
+             <Activity className="w-4 h-4" />
+             METRICS
+           </Button>
         </div>
       </header>
       
