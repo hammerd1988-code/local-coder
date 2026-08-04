@@ -67,15 +67,54 @@ router.delete('/messages', async (req: express.Request, res: express.Response) =
 router.post('/complete', async (req: express.Request, res: express.Response) => {
   try {
     const { messages, model } = req.body;
-    
-    // Get Ollama settings
-    const baseUrlSetting = await db.selectFrom('settings')
-      .select('value')
-      .where('key', '=', 'ollama_base_url')
-      .executeTakeFirst();
-    
-    const baseUrl = baseUrlSetting?.value || 'http://localhost:11434';
-    
+
+    const settings = await db.selectFrom('settings')
+      .select(['key', 'value'])
+      .execute();
+    const setting = (key: string) => settings.find((s) => s.key === key)?.value;
+
+    const provider = setting('model_provider') || 'ollama';
+
+    // LM Studio speaks the OpenAI API, not Ollama's, so it needs a different
+    // endpoint and its response is reshaped to match what the client reads.
+    if (provider === 'lmstudio') {
+      const baseUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
+
+      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`LM Studio API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const choice = data.choices?.[0]?.message;
+
+      // Reasoning models (Qwen3, DeepSeek-R1) leave `content` empty and put
+      // their output in `reasoning_content` instead.
+      const content = choice?.content?.trim()
+        ? choice.content
+        : choice?.reasoning_content ?? '';
+
+      res.json({
+        message: { role: choice?.role ?? 'assistant', content },
+        model: data.model,
+        usage: data.usage
+      });
+      return;
+    }
+
+    const baseUrl = setting('ollama_base_url') || 'http://localhost:11434';
+
     // Call Ollama API
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
@@ -97,7 +136,7 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
     res.json(data);
     return;
   } catch (error) {
-    console.error('Error calling Ollama:', error);
+    console.error('Error calling model provider:', error);
     res.status(500).json({ error: 'Failed to get completion from model' });
     return;
   }
