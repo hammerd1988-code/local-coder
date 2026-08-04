@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import simpleGit from 'simple-git';
+import { simpleGit } from 'simple-git';
 import path from 'path';
 import { gitOperationsTotal, gitOperationDuration, gitBranchesCount, gitUnstagedChanges, timeOperation } from '../metrics.js';
 

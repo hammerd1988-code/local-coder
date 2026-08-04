@@ -1,5 +1,7 @@
+// Must be first: modules below read process.env at module scope, and ES imports
+// are evaluated before this module's body runs.
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import { WebSocketServer } from 'ws';
 import { setupStaticServing } from './static-serve.js';
 import filesRouter from './routes/files.js';
@@ -10,8 +12,6 @@ import gitRouter from './routes/git.js';
 import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
 import huggingfaceRouter from './routes/huggingface.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
-
-dotenv.config();
 
 const app = express();
 
