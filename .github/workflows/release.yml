@@ -43,7 +43,7 @@ jobs:
           echo "Generated changelog for release"
       
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           body_path: CHANGELOG.txt
           draft: false
@@ -90,7 +90,7 @@ jobs:
             package-lock.json
       
       - name: Upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             local-coder-${{ github.ref_name }}-source.tar.gz
