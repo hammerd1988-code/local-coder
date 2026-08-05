@@ -8,6 +8,7 @@ import ThemeSwitcher from '../components/ThemeSwitcher';
 import PluginsPanel from '../components/PluginsPanel';
 import GitPanel from '../components/GitPanel';
 import TerminalPanel from '../components/TerminalPanel';
+import PreviewPanel from '../components/PreviewPanel';
 import RepoCloner from '../components/RepoCloner';
 import { Button } from '../components/ui/button';
 import { Activity, Plug } from 'lucide-react';
@@ -16,7 +17,7 @@ export default function EditorPage() {
   const navigate = useNavigate();
   const [selectedFileId, setSelectedFileId] = React.useState<number | null>(null);
   const [editorTheme, setEditorTheme] = React.useState<string>('vs-dark');
-  const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git' | 'terminal'>('chat');
+  const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git' | 'terminal' | 'preview'>('chat');
   const [bottomPanel, setBottomPanel] = React.useState(false);
   const [applyRequest, setApplyRequest] = React.useState<{ code: string; nonce: number } | null>(null);
 
@@ -70,6 +71,17 @@ export default function EditorPage() {
             }`}
           >
             CHAT
+          </Button>
+          <Button
+            onClick={() => setRightPanel('preview')}
+            variant="ghost"
+            className={`text-xs font-mono ${
+              rightPanel === 'preview'
+                ? 'bg-burgundy-600/25 text-burgundy-300 border border-burgundy-500/60 shadow-[0_0_12px_rgba(196,2,51,0.6)]'
+                : 'text-gray-400 hover:text-burgundy-300'
+            }`}
+          >
+            PREVIEW
           </Button>
           <Button
             onClick={() => setRightPanel('git')}
@@ -156,6 +168,7 @@ export default function EditorPage() {
                 )}
                 {rightPanel === 'plugins' && <PluginsPanel />}
                 {rightPanel === 'git' && <GitPanel />}
+                {rightPanel === 'preview' && <PreviewPanel />}
               </Panel>
             </PanelGroup>
           </Panel>

@@ -58,6 +58,8 @@ export default function CodeEditor({ selectedFileId, theme, applyRequest }: Code
           language: file.language
         })
       });
+      // Lets the live preview reload immediately instead of waiting for its poll
+      window.dispatchEvent(new Event('files-changed'));
     } catch (error) {
       console.error('Error saving file:', error);
     }
