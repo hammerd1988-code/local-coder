@@ -67,7 +67,9 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: false,
       },
-      host: true,
+      // localhost only: the app proxies an unauthenticated shell (terminal WS),
+      // so it must not listen on LAN interfaces
+      host: 'localhost',
       port: vitePort,
       allowedHosts: true,
       cors: true, // Enable CORS in the dev server
@@ -75,6 +77,8 @@ export default defineConfig(({ mode }) => {
         '/api/': {
           target: 'http://localhost:3001',
           changeOrigin: true,
+          // Forward WebSocket upgrades (terminal sessions)
+          ws: true,
         },
       },
     },

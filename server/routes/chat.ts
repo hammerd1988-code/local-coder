@@ -63,82 +63,124 @@ router.delete('/messages', async (req: express.Request, res: express.Response) =
   }
 });
 
-// Chat completion with local model
+async function getSettings() {
+  const rows = await db.selectFrom('settings')
+    .select(['key', 'value'])
+    .execute();
+  return (key: string) => rows.find((s) => s.key === key)?.value;
+}
+
+// List models actually available on each provider, so the client can offer a
+// picker instead of a free-text field (typos there fail as opaque 500s).
+router.get('/models', async (_req: express.Request, res: express.Response) => {
+  const setting = await getSettings();
+  const result: { provider: string; models: string[] }[] = [];
+
+  const lmstudioUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
+  try {
+    const r = await fetch(`${lmstudioUrl}/v1/models`, { signal: AbortSignal.timeout(3000) });
+    const data = await r.json();
+    result.push({ provider: 'lmstudio', models: (data.data ?? []).map((m: any) => m.id) });
+  } catch {
+    result.push({ provider: 'lmstudio', models: [] });
+  }
+
+  const ollamaUrl = setting('ollama_base_url') || 'http://localhost:11434';
+  try {
+    const r = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    const data = await r.json();
+    result.push({ provider: 'ollama', models: (data.models ?? []).map((m: any) => m.name) });
+  } catch {
+    result.push({ provider: 'ollama', models: [] });
+  }
+
+  res.json(result);
+  return;
+});
+
+/** Split an incoming byte stream into complete lines, buffering partials. */
+async function* lines(body: AsyncIterable<Uint8Array>) {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for await (const chunk of body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let idx: number;
+    while ((idx = buffer.indexOf('\n')) >= 0) {
+      yield buffer.slice(0, idx).replace(/\r$/, '');
+      buffer = buffer.slice(idx + 1);
+    }
+  }
+  if (buffer.trim()) yield buffer;
+}
+
+// Chat completion with local model, streamed back as server-sent events:
+//   data: {"type":"content"|"reasoning","delta":string}
+//   data: {"type":"done"}
+//   data: {"type":"error","message":string}
 router.post('/complete', async (req: express.Request, res: express.Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (event: object) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
   try {
     const { messages, model } = req.body;
-
-    const settings = await db.selectFrom('settings')
-      .select(['key', 'value'])
-      .execute();
-    const setting = (key: string) => settings.find((s) => s.key === key)?.value;
-
+    const setting = await getSettings();
     const provider = setting('model_provider') || 'ollama';
 
-    // LM Studio speaks the OpenAI API, not Ollama's, so it needs a different
-    // endpoint and its response is reshaped to match what the client reads.
     if (provider === 'lmstudio') {
+      // LM Studio speaks the OpenAI API: SSE lines carrying delta objects
       const baseUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
-
       const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          stream: false
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages, stream: true })
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         throw new Error(`LM Studio API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const choice = data.choices?.[0]?.message;
-
-      // Reasoning models (Qwen3, DeepSeek-R1) leave `content` empty and put
-      // their output in `reasoning_content` instead.
-      const content = choice?.content?.trim()
-        ? choice.content
-        : choice?.reasoning_content ?? '';
-
-      res.json({
-        message: { role: choice?.role ?? 'assistant', content },
-        model: data.model,
-        usage: data.usage
+      for await (const line of lines(response.body as any)) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6);
+        if (payload === '[DONE]') break;
+        const delta = JSON.parse(payload).choices?.[0]?.delta ?? {};
+        if (delta.reasoning_content) send({ type: 'reasoning', delta: delta.reasoning_content });
+        if (delta.content) send({ type: 'content', delta: delta.content });
+      }
+    } else {
+      // Ollama streams newline-delimited JSON objects
+      const baseUrl = setting('ollama_base_url') || 'http://localhost:11434';
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model || 'llama3', messages, stream: true })
       });
-      return;
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Ollama API error: ${response.statusText}`);
+      }
+
+      for await (const line of lines(response.body as any)) {
+        if (!line.trim()) continue;
+        const data = JSON.parse(line);
+        if (data.message?.thinking) send({ type: 'reasoning', delta: data.message.thinking });
+        if (data.message?.content) send({ type: 'content', delta: data.message.content });
+        if (data.done) break;
+      }
     }
 
-    const baseUrl = setting('ollama_base_url') || 'http://localhost:11434';
-
-    // Call Ollama API
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: model || 'codellama',
-        messages,
-        stream: false
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    res.json(data);
-    return;
+    send({ type: 'done' });
   } catch (error) {
     console.error('Error calling model provider:', error);
-    res.status(500).json({ error: 'Failed to get completion from model' });
-    return;
+    send({ type: 'error', message: error instanceof Error ? error.message : 'Completion failed' });
+  } finally {
+    res.end();
   }
 });
 

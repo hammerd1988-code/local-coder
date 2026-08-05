@@ -9,6 +9,17 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
+        // Vibrant crimson-burgundy offset accent for the cyan/purple scheme
+        burgundy: {
+          300: '#f05a75',
+          400: '#e02b50',
+          500: '#c40233',
+          600: '#a1002a',
+          700: '#7e0021',
+          800: '#570017',
+          900: '#3a000f',
+          950: '#20000a',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

@@ -95,7 +95,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
   }
 
   return (
-    <div className="h-full flex flex-col bg-black/40 border-r border-cyan-500/30 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-black/60 border-r border-cyan-500/30 backdrop-blur-sm">
       <div className="p-4 border-b border-cyan-500/30 flex items-center justify-between">
         <h2 className="font-semibold text-cyan-400 font-mono">{'>'} Files</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

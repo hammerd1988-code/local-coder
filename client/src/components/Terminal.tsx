@@ -16,6 +16,7 @@ export default function Terminal({ terminalId, isActive }: TerminalProps) {
 
   React.useEffect(() => {
     if (!terminalRef.current) return;
+    let disposed = false;
 
     const term = new XTerm({
       cursorBlink: true,
@@ -52,12 +53,29 @@ export default function Terminal({ terminalId, isActive }: TerminalProps) {
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Connect to websocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/terminal?id=${terminalId}`);
-    socketRef.current = ws;
+    // Connect to websocket (the server requires a per-boot auth token)
+    connect();
 
-    ws.onopen = () => {
+    async function connect() {
+      let token = '';
+      try {
+        const res = await fetch('/api/terminal/token');
+        token = (await res.json()).token;
+      } catch (error) {
+        console.error('Error fetching terminal token:', error);
+        term.writeln('\\r\\n\\x1b[1;31mFailed to authenticate terminal session\\x1b[0m\\r\\n');
+        return;
+      }
+      if (disposed) return;
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/api/terminal?id=${terminalId}&token=${token}`);
+      socketRef.current = ws;
+      wireSocket(ws);
+    }
+
+    function wireSocket(ws: WebSocket) {
+      ws.onopen = () => {
       console.log(`Terminal ${terminalId} WebSocket connected`);
       term.writeln('\\x1b[1;36m╔═══════════════════════════════════════════════════════════╗\\x1b[0m');
       term.writeln('\\x1b[1;36m║   LOCAL.CODE Terminal v2.0.0                             ║\\x1b[0m');
@@ -73,34 +91,36 @@ export default function Terminal({ terminalId, isActive }: TerminalProps) {
       term.writeln('  \\x1b[36mCtrl+T\\x1b[0m = New Tab  │  \\x1b[36mCtrl+W\\x1b[0m = Close Tab');
       term.writeln('  \\x1b[36mCtrl+Tab\\x1b[0m = Next Tab  │  \\x1b[36mCtrl+Shift+Tab\\x1b[0m = Prev Tab');
       term.writeln('');
-    };
+      };
 
-    ws.onmessage = (event) => {
-      term.write(event.data);
-    };
+      ws.onmessage = (event) => {
+        term.write(event.data);
+      };
 
-    ws.onerror = (error) => {
-      console.error(`Terminal ${terminalId} WebSocket error:`, error);
-      term.writeln('\\r\\n\\x1b[1;31mWebSocket connection error\\x1b[0m\\r\\n');
-    };
+      ws.onerror = (error) => {
+        console.error(`Terminal ${terminalId} WebSocket error:`, error);
+        term.writeln('\\r\\n\\x1b[1;31mWebSocket connection error\\x1b[0m\\r\\n');
+      };
 
-    ws.onclose = () => {
-      console.log(`Terminal ${terminalId} WebSocket disconnected`);
-      term.writeln('\\r\\n\\x1b[1;33mConnection closed. Refresh to reconnect.\\x1b[0m\\r\\n');
-    };
+      ws.onclose = () => {
+        console.log(`Terminal ${terminalId} WebSocket disconnected`);
+        term.writeln('\\r\\n\\x1b[1;33mConnection closed. Refresh to reconnect.\\x1b[0m\\r\\n');
+      };
 
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
-      }
-    });
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+        }
+      });
+    }
 
     // Handle resize
     const handleResize = () => {
       if (fitAddonRef.current && isActive) {
         fitAddonRef.current.fit();
-        if (ws.readyState === WebSocket.OPEN && xtermRef.current) {
-          ws.send(JSON.stringify({
+        const sock = socketRef.current;
+        if (sock && sock.readyState === WebSocket.OPEN && xtermRef.current) {
+          sock.send(JSON.stringify({
             type: 'resize',
             cols: xtermRef.current.cols,
             rows: xtermRef.current.rows
@@ -116,9 +136,10 @@ export default function Terminal({ terminalId, isActive }: TerminalProps) {
     }
 
     return () => {
+      disposed = true;
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
-      ws.close();
+      socketRef.current?.close();
       term.dispose();
     };
   }, [terminalId]);

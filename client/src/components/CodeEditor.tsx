@@ -4,6 +4,7 @@ import Editor, { OnMount } from '@monaco-editor/react';
 interface CodeEditorProps {
   selectedFileId: number | null;
   theme: string;
+  applyRequest?: { code: string; nonce: number } | null;
 }
 
 interface FileData {
@@ -13,7 +14,7 @@ interface FileData {
   language: string;
 }
 
-export default function CodeEditor({ selectedFileId, theme }: CodeEditorProps) {
+export default function CodeEditor({ selectedFileId, theme, applyRequest }: CodeEditorProps) {
   const [file, setFile] = React.useState<FileData | null>(null);
   const [content, setContent] = React.useState('');
 
@@ -25,6 +26,14 @@ export default function CodeEditor({ selectedFileId, theme }: CodeEditorProps) {
       setContent('');
     }
   }, [selectedFileId]);
+
+  // Code applied from the chat panel replaces the open file's content
+  React.useEffect(() => {
+    if (applyRequest && file) {
+      setContent(applyRequest.code);
+      saveFile(applyRequest.code);
+    }
+  }, [applyRequest?.nonce]);
 
   async function loadFile(id: number) {
     try {

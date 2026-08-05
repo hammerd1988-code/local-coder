@@ -1,9 +1,18 @@
 import { Router } from 'express';
+import { randomBytes } from 'crypto';
 import { spawn } from 'node-pty';
 import { WebSocketServer, WebSocket } from 'ws';
 import { terminalSessionsActive, terminalSessionsTotal, terminalDataTransferred, websocketConnectionsActive, websocketMessagesTotal } from '../metrics.js';
 
 const router = Router();
+
+// Per-boot secret: the terminal WebSocket hands out a raw shell, so require
+// clients to first fetch this token over HTTP and echo it on connect.
+const sessionToken = randomBytes(32).toString('hex');
+
+router.get('/token', (_req, res) => {
+  res.json({ token: sessionToken });
+});
 
 // Store active terminal sessions
 const terminals = new Map<string, any>();
@@ -12,6 +21,13 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
   wss.on('connection', (ws: WebSocket, req) => {
     // Extract terminal ID from query string
     const url = new URL(req.url || '', `http://${req.headers.host}`);
+
+    if (url.searchParams.get('token') !== sessionToken) {
+      console.warn('Terminal WebSocket rejected: bad or missing token');
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
+
     const terminalIdFromQuery = url.searchParams.get('id') || Math.random().toString(36).substring(7);
     
     console.log('Terminal WebSocket client connected:', terminalIdFromQuery);
