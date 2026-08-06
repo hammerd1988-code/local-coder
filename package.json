@@ -44,7 +44,7 @@
     "cmdk": "1.1.1",
     "dotenv": "16.4.7",
     "esbuild": "0.25.1",
-    "express": "5.1.0",
+    "express": "5.2.1",
     "kysely": "^0.27.4",
     "lucide-react": "0.474.0",
     "node-pty": "^1.1.0",
@@ -67,7 +67,7 @@
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
-    "@types/express": "5.0.0",
+    "@types/express": "5.0.6",
     "@types/node": "^22.13.5",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
