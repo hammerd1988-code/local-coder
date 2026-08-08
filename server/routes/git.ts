@@ -1,20 +1,24 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { simpleGit } from 'simple-git';
+import { simpleGit, type SimpleGit } from 'simple-git';
 import path from 'path';
 import { gitOperationsTotal, gitOperationDuration, gitBranchesCount, gitUnstagedChanges, timeOperation } from '../metrics.js';
+import { getWorkspaceRoot } from '../workspace.js';
 
 const router = Router();
 
-// Initialize git in the data directory
 const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
-const git = simpleGit(dataDirectory);
+
+async function getGit(): Promise<SimpleGit> {
+  const workspace = await getWorkspaceRoot();
+  return simpleGit(workspace || dataDirectory);
+}
 
 // Get git status
 router.get('/status', async (req, res) => {
   try {
     const status = await timeOperation(
-      () => git.status(),
+      async () => (await getGit()).status(),
       gitOperationDuration,
       { operation: 'status' }
     );
@@ -51,7 +55,7 @@ router.get('/status', async (req, res) => {
 router.get('/branches', async (req, res) => {
   try {
     const branches = await timeOperation(
-      () => git.branchLocal(),
+      async () => (await getGit()).branchLocal(),
       gitOperationDuration,
       { operation: 'branches' }
     );
@@ -99,7 +103,7 @@ router.post('/branches', async (req, res) => {
     }
 
     await timeOperation(
-      () => git.checkoutLocalBranch(name),
+      async () => (await getGit()).checkoutLocalBranch(name),
       gitOperationDuration,
       { operation: 'create_branch' }
     );
@@ -135,7 +139,7 @@ router.post('/checkout', async (req, res) => {
     }
 
     await timeOperation(
-      () => git.checkout(branch),
+      async () => (await getGit()).checkout(branch),
       gitOperationDuration,
       { operation: 'checkout' }
     );
@@ -177,11 +181,11 @@ router.post('/commit', async (req, res) => {
     const result = await timeOperation(
       async () => {
         if (files && files.length > 0) {
-          await git.add(files);
+          await (await getGit()).add(files);
         } else {
-          await git.add('.');
+          await (await getGit()).add('.');
         }
-        return await git.commit(message);
+        return await (await getGit()).commit(message);
       },
       gitOperationDuration,
       { operation: 'commit' }
@@ -200,7 +204,7 @@ router.post('/commit', async (req, res) => {
 // Initialize git repo
 router.post('/init', async (req, res) => {
   try {
-    await git.init();
+    await (await getGit()).init();
     
     console.log('Git repository initialized');
     res.json({ success: true });
@@ -213,7 +217,7 @@ router.post('/init', async (req, res) => {
 // Get commit log
 router.get('/log', async (req, res) => {
   try {
-    const log = await git.log({ maxCount: 20 });
+    const log = await (await getGit()).log({ maxCount: 20 });
     
     console.log('Git log:', log.total, 'commits');
     res.json(log);
