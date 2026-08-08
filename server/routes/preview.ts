@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import fs from 'fs/promises';
 import { db } from '../db.js';
+import { getWorkspaceRoot, listWorkspaceFiles, readWorkspaceFile, resolveInWorkspace } from '../workspace.js';
 
 const router = Router();
 
@@ -16,47 +18,89 @@ const MIME_TYPES: Record<string, string> = {
   md: 'text/plain; charset=utf-8'
 };
 
-// Cheap change detector so the client knows when to reload the iframe
 router.get('/version', async (_req, res) => {
-  const row = await db.selectFrom('files')
-    .select((eb) => [
-      eb.fn.max('updated_at').as('latest'),
-      eb.fn.countAll().as('count')
-    ])
-    .executeTakeFirst();
-  res.json({ version: `${row?.latest ?? 0}-${row?.count ?? 0}` });
-  return;
+  try {
+    const root = await getWorkspaceRoot();
+    if (root) {
+      const files = await listWorkspaceFiles(root);
+      let latest = 0;
+      for (const f of files.slice(0, 300)) {
+        try {
+          const st = await fs.stat(resolveInWorkspace(root, f.path));
+          const t = Math.floor(st.mtimeMs / 1000);
+          if (t > latest) latest = t;
+        } catch {
+          // skip
+        }
+      }
+      res.json({ version: `disk-${latest}-${files.length}` });
+      return;
+    }
+
+    const row = await db.selectFrom('files')
+      .select((eb) => [
+        eb.fn.max('updated_at').as('latest'),
+        eb.fn.countAll().as('count')
+      ])
+      .executeTakeFirst();
+    res.json({ version: `${row?.latest ?? 0}-${row?.count ?? 0}` });
+    return;
+  } catch (error) {
+    console.error('Error computing preview version:', error);
+    res.json({ version: String(Date.now()) });
+    return;
+  }
 });
 
-// Serve project files from the database so a preview iframe can load
-// /api/preview/index.html and have relative asset links resolve naturally.
 router.use(async (req, res) => {
   if (req.method !== 'GET') {
     res.status(405).end();
     return;
   }
 
-  const path = decodeURIComponent(req.path.replace(/^\/+/, ''));
-  if (!path) {
+  const filePath = decodeURIComponent(req.path.replace(/^\/+/, ''));
+  if (!filePath) {
     res.status(404).send('Not found');
     return;
   }
 
-  const file = await db.selectFrom('files')
-    .selectAll()
-    .where('path', '=', path)
-    .executeTakeFirst();
+  try {
+    const root = await getWorkspaceRoot();
+    if (root) {
+      try {
+        const file = await readWorkspaceFile(root, filePath);
+        const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+        res.setHeader('Content-Type', MIME_TYPES[ext] ?? 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        res.send(file.content);
+        return;
+      } catch {
+        // fall through to 404
+        res.status(404).send(`No file named "${filePath}" in the workspace`);
+        return;
+      }
+    }
 
-  if (!file) {
-    res.status(404).send(`No file named "${path}" in the project`);
+    const file = await db.selectFrom('files')
+      .selectAll()
+      .where('path', '=', filePath)
+      .executeTakeFirst();
+
+    if (!file) {
+      res.status(404).send(`No file named "${filePath}" in the project`);
+      return;
+    }
+
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+    res.setHeader('Content-Type', MIME_TYPES[ext] ?? 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(file.content);
+    return;
+  } catch (error) {
+    console.error('Preview serve error:', error);
+    res.status(500).send('Preview error');
     return;
   }
-
-  const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  res.setHeader('Content-Type', MIME_TYPES[ext] ?? 'text/plain; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.send(file.content);
-  return;
 });
 
 export default router;
