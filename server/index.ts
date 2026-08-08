@@ -12,6 +12,7 @@ import gitRouter from './routes/git.js';
 import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
 import huggingfaceRouter from './routes/huggingface.js';
 import previewRouter from './routes/preview.js';
+import workspaceRouter from './routes/workspace.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
 app.use('/api/huggingface', huggingfaceRouter);
 app.use('/api/preview', previewRouter);
+app.use('/api/workspace', workspaceRouter);
 
 // Metrics endpoint
 app.get('/metrics', metricsHandler);

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Send, Settings, Trash2, Square, Copy, Check, FileCode2, Mic } from 'lucide-react';
+import { Send, Settings, Trash2, Square, Copy, Check, FileCode2, Mic, Workflow } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { DEFAULT_WORKFLOW_ID, WORKFLOWS, getWorkflow } from '../lib/workflows';
 
 interface Message {
   id: number;
@@ -27,6 +28,7 @@ interface ProviderModels {
 interface ChatPanelProps {
   selectedFileId: number | null;
   onApplyCode?: (code: string) => void;
+  onApplyMany?: (files: { path: string; content: string }[]) => void;
 }
 
 const STREAMING_ID = -1;
@@ -79,9 +81,11 @@ function CodeBlock({ code, language, canApply, onApply }: {
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
           </Button>
           {onApply && (
-            <Button size="sm" variant="ghost" onClick={onApply} disabled={!canApply}
-              title={canApply ? 'Replace open file content' : 'Open a file to apply'}
-              className="h-5 px-1.5 text-[10px] text-purple-300 hover:bg-purple-500/20 disabled:opacity-40">
+            <Button size="sm" variant="ghost" onClick={onApply}
+              title={canApply
+                ? 'Apply to open file (or create path from first-line comment)'
+                : 'Create/update file from first-line path comment, or open a file first'}
+              className="h-5 px-1.5 text-[10px] text-purple-300 hover:bg-purple-500/20">
               <FileCode2 className="h-3 w-3 mr-1" /> Apply
             </Button>
           )}
@@ -94,7 +98,23 @@ function CodeBlock({ code, language, canApply, onApply }: {
   );
 }
 
-export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProps) {
+function extractPathedBlocks(text: string): { path: string; content: string }[] {
+  const files: { path: string; content: string }[] = [];
+  const regex = /```(?:\w*)\n?([\s\S]*?)(?:```|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const raw = match[1].replace(/\n$/, '');
+    const first = raw.split('\n')[0] ?? '';
+    const pathMatch = first.match(/^(?:\/\/|#|\/\*|;|<!--)\s*([A-Za-z0-9_./\\-]+\.[A-Za-z0-9]+)/);
+    if (!pathMatch) continue;
+    const path = pathMatch[1].replace(/\\/g, '/');
+    const content = raw.replace(/^[^\n]*\n?/, '');
+    files.push({ path, content });
+  }
+  return files;
+}
+
+export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: ChatPanelProps) {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
@@ -104,8 +124,11 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
     model_provider: 'lmstudio',
     model_name: '',
     ollama_base_url: 'http://localhost:11434',
-    lmstudio_base_url: 'http://localhost:1234'
+    lmstudio_base_url: 'http://localhost:1234',
+    chat_workflow: DEFAULT_WORKFLOW_ID,
   });
+  const [workflowId, setWorkflowId] = React.useState(DEFAULT_WORKFLOW_ID);
+  const workflow = getWorkflow(workflowId);
   const [availableModels, setAvailableModels] = React.useState<ProviderModels[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -204,8 +227,23 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
       const response = await fetch('/api/settings');
       const data = await response.json();
       setSettings((prev) => ({ ...prev, ...data }));
+      if (data.chat_workflow) setWorkflowId(data.chat_workflow);
     } catch (error) {
       console.error('Error loading settings:', error);
+    }
+  }
+
+  async function selectWorkflow(id: string) {
+    setWorkflowId(id);
+    setSettings((prev) => ({ ...prev, chat_workflow: id }));
+    try {
+      await fetch('/api/settings/chat_workflow', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: id }),
+      });
+    } catch (error) {
+      console.error('Error saving workflow:', error);
     }
   }
 
@@ -233,21 +271,54 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
     }
   }
 
-  async function buildContextMessage(): Promise<Message | null> {
-    if (!includeFile || !selectedFileId) return null;
-    try {
-      const response = await fetch(`/api/files/${selectedFileId}`);
-      const file = await response.json();
-      const truncated = file.content.length > MAX_CONTEXT_CHARS;
-      const snippet = truncated ? file.content.slice(0, MAX_CONTEXT_CHARS) + '\n/* ...truncated... */' : file.content;
-      return {
-        id: 0,
-        role: 'system',
-        content: `You are a coding assistant inside a code editor. The user has the file "${file.path}" open:\n\n\`\`\`${file.language || ''}\n${snippet}\n\`\`\`\n\nWhen the user refers to "this file" or asks for changes, they mean that file. Answer concisely and put code in fenced code blocks.`
-      };
-    } catch {
-      return null;
+  async function buildSystemMessage(): Promise<{ role: 'system'; content: string }> {
+    const parts: string[] = [workflow.systemPrompt];
+    const mode = workflow.contextMode;
+
+    if (mode === 'project' || mode === 'file') {
+      try {
+        const listRes = await fetch('/api/files');
+        const files: { id: number; path: string }[] = await listRes.json();
+
+        if (mode === 'project') {
+          const tree = files.map((f) => f.path).sort().join('\n') || '(empty workspace)';
+          parts.push(`Workspace files:\n${tree}`);
+        }
+
+        // Project rules file (Cursor-style)
+        const rulesMeta = files.find((f) =>
+          f.path === '.localcoderules' || f.path === '.cursorrules' || f.path.endsWith('/.localcoderules')
+        );
+        if (rulesMeta) {
+          try {
+            const rules = await (await fetch(`/api/files/${rulesMeta.id}`)).json();
+            if (rules.content?.trim()) {
+              parts.push(`Project rules (.localcoderules):\n${rules.content.slice(0, 8000)}`);
+            }
+          } catch {
+            // optional
+          }
+        }
+
+        if (includeFile && selectedFileId) {
+          const response = await fetch(`/api/files/${selectedFileId}`);
+          const file = await response.json();
+          const truncated = file.content.length > MAX_CONTEXT_CHARS;
+          const snippet = truncated
+            ? file.content.slice(0, MAX_CONTEXT_CHARS) + '\n/* ...truncated... */'
+            : file.content;
+          parts.push(
+            `Open file "${file.path}":\n\`\`\`${file.language || ''}\n${snippet}\n\`\`\`\nWhen the user refers to "this file", they mean that file.`
+          );
+        } else if (mode === 'file') {
+          parts.push('No file is open. If the task needs code, ask the user to open or create a file.');
+        }
+      } catch (error) {
+        console.error('Error building workflow context:', error);
+      }
     }
+
+    return { role: 'system', content: parts.join('\n\n') };
   }
 
   function updateStreaming(updater: (m: Message) => Message) {
@@ -287,13 +358,11 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
       const savedUserMsg = await persistMessage('user', userMessage);
       if (savedUserMsg) setMessages((prev) => [...prev, savedUserMsg]);
 
-      const contextMessage = await buildContextMessage();
+      const systemMessage = await buildSystemMessage();
       const history = [...messages, { role: 'user' as const, content: userMessage }]
         .filter((m) => m.role !== 'system')
         .map((m) => ({ role: m.role, content: m.content }));
-      const chatMessages = contextMessage
-        ? [{ role: 'system', content: contextMessage.content }, ...history]
-        : history;
+      const chatMessages = [systemMessage, ...history];
 
       // Placeholder that fills in as tokens stream back
       setMessages((prev) => [...prev, { id: STREAMING_ID, role: 'assistant', content: '', reasoning: '' }]);
@@ -388,9 +457,10 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
 
   return (
     <div className="h-full flex flex-col bg-black/60 backdrop-blur-sm">
-      <div className="p-4 border-b border-cyan-500/30 flex items-center justify-between">
-        <h2 className="font-semibold text-purple-400 font-mono">{'>'} AI Assistant</h2>
-        <div className="flex gap-1">
+      <div className="p-3 border-b border-cyan-500/30 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold text-purple-400 font-mono shrink-0">{'>'} AI Assistant</h2>
+          <div className="flex gap-1">
           <Button size="sm" variant="ghost" onClick={clearChat} className="hover:bg-red-500/20 hover:text-red-400">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -471,13 +541,34 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
               </div>
             </DialogContent>
           </Dialog>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Workflow className="h-3.5 w-3.5 text-burgundy-300 shrink-0" />
+          <Select value={workflowId} onValueChange={selectWorkflow}>
+            <SelectTrigger className="h-8 flex-1 bg-black/40 border-burgundy-500/50 text-cyan-100 text-xs font-mono">
+              <SelectValue placeholder="Workflow" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-950 border-burgundy-500/50 text-cyan-100 font-mono">
+              {WORKFLOWS.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  <span className="font-semibold">{w.label}</span>
+                  <span className="text-purple-400/70"> — {w.description}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center text-sm text-purple-400/60 pt-8 font-mono">
-            Start a conversation with your AI assistant
+          <div className="text-center text-sm font-mono pt-8 px-2 space-y-2">
+            <p className="text-burgundy-300">{workflow.label} workflow</p>
+            <p className="text-purple-400/70">{workflow.emptyHint}</p>
+            {!contextPath && workflow.contextMode !== 'none' && (
+              <p className="text-xs text-cyan-400/60">Tip: open a file so the model can see your code.</p>
+            )}
           </div>
         ) : (
           messages.map((message) => (
@@ -499,19 +590,34 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
                   </details>
                 )}
                 {message.role === 'assistant' ? (
-                  splitCodeBlocks(message.content).map((segment, i) =>
-                    segment.type === 'code' ? (
-                      <CodeBlock
-                        key={i}
-                        code={segment.content}
-                        language={segment.language}
-                        canApply={!!selectedFileId}
-                        onApply={onApplyCode ? () => onApplyCode(segment.content) : undefined}
-                      />
-                    ) : (
-                      <p key={i} className="text-sm whitespace-pre-wrap">{segment.content}</p>
-                    )
-                  )
+                  <>
+                    {splitCodeBlocks(message.content).map((segment, i) =>
+                      segment.type === 'code' ? (
+                        <CodeBlock
+                          key={i}
+                          code={segment.content}
+                          language={segment.language}
+                          canApply={!!selectedFileId}
+                          onApply={onApplyCode ? () => onApplyCode(segment.content) : undefined}
+                        />
+                      ) : (
+                        <p key={i} className="text-sm whitespace-pre-wrap">{segment.content}</p>
+                      )
+                    )}
+                    {(() => {
+                      const batch = extractPathedBlocks(message.content);
+                      if (batch.length < 1 || !onApplyMany) return null;
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={() => onApplyMany(batch)}
+                          className="mt-2 h-7 text-[11px] bg-burgundy-600/40 hover:bg-burgundy-500/50 border border-burgundy-400/50 text-burgundy-100"
+                        >
+                          Apply All ({batch.length} file{batch.length === 1 ? '' : 's'})
+                        </Button>
+                      );
+                    })()}
+                  </>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 )}
@@ -526,25 +632,38 @@ export default function ChatPanel({ selectedFileId, onApplyCode }: ChatPanelProp
       </div>
 
       <div className="p-4 border-t border-cyan-500/30 space-y-2">
-        {contextPath && (
-          <button
-            onClick={() => setIncludeFile(!includeFile)}
-            className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
-              includeFile
-                ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10'
-                : 'border-gray-600 text-gray-500 line-through'
-            }`}
-            title="Toggle sending the open file as context"
+        <div className="flex flex-wrap gap-1">
+          <span
+            className="text-[10px] font-mono px-2 py-0.5 rounded border border-burgundy-500/50 text-burgundy-300 bg-burgundy-600/15"
+            title={workflow.description}
           >
-            ctx: {contextPath}
-          </button>
-        )}
+            wf: {workflow.label}
+          </span>
+          {workflow.contextMode === 'project' && (
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-purple-500/40 text-purple-300 bg-purple-500/10">
+              ctx: project tree
+            </span>
+          )}
+          {contextPath && (
+            <button
+              onClick={() => setIncludeFile(!includeFile)}
+              className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                includeFile
+                  ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10'
+                  : 'border-gray-600 text-gray-500 line-through'
+              }`}
+              title="Toggle sending the open file as context"
+            >
+              ctx: {contextPath}
+            </button>
+          )}
+        </div>
         {micError && (
           <p className="text-[10px] font-mono text-red-400/80">{micError}</p>
         )}
         <div className="flex gap-2">
           <Input
-            placeholder={isListening ? 'Listening…' : 'Ask about code or request changes...'}
+            placeholder={isListening ? 'Listening…' : workflow.inputPlaceholder}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
