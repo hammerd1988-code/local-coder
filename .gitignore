@@ -21,6 +21,9 @@ data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
 data/*.db
+data/launcher.log
+data/app-stdout.log
+data/app-stderr.log
 
 # Logs
 logs/

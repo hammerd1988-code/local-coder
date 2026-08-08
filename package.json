@@ -6,6 +6,8 @@
   "scripts": {
     "build": "vite build && tsc --project tsconfig.server.json",
     "start": "tsx watch scripts/dev.ts",
+    "app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-local-coder.ps1",
+    "app:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
     "lint": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
     "test": "echo \"No tests configured yet\" && exit 0",
     "test:coverage": "echo \"No coverage configured yet\" && exit 0",
