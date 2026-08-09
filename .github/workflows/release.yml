@@ -20,7 +20,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       
@@ -43,7 +43,7 @@ jobs:
           echo "Generated changelog for release"
       
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           body_path: CHANGELOG.txt
           draft: false
@@ -59,7 +59,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -90,7 +90,7 @@ jobs:
             package-lock.json
       
       - name: Upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             local-coder-${{ github.ref_name }}-source.tar.gz

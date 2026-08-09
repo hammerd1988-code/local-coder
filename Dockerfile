@@ -1,5 +1,5 @@
 # Multi-stage build for production deployment
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 
 # Install build dependencies
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:25-alpine
 
 # Install production dependencies
 WORKDIR /app
