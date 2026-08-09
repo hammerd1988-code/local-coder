@@ -176,7 +176,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
               <div>
                 <Label className="text-purple-300">Absolute path</Label>
                 <Input
-                  placeholder="C:\Users\you\projects\my-app"
+                  placeholder="C:\\Users\\you\\projects\\my-app"
                   value={folderDraft}
                   onChange={(e) => setFolderDraft(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && openWorkspace()}

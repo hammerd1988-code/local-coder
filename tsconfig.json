@@ -18,5 +18,7 @@
     "paths": {
       "@/*": ["./client/src/*"]
     }
-  }
+  },
+  "include": ["client/src"],
+  "exclude": ["node_modules", "dist", ".casper-ref", "data"]
 }

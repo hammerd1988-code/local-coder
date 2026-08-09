@@ -13,9 +13,29 @@ import terminalRouter, { setupTerminalWebSocket } from './routes/terminal.js';
 import huggingfaceRouter from './routes/huggingface.js';
 import previewRouter from './routes/preview.js';
 import workspaceRouter from './routes/workspace.js';
+import casperRouter from './routes/casper.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 const app = express();
+
+const LOCAL_ADDRESSES = new Set([
+  '127.0.0.1',
+  '::1',
+  '::ffff:127.0.0.1'
+]);
+
+function isLocalRequest(ip: string | undefined) {
+  return !!ip && LOCAL_ADDRESSES.has(ip);
+}
+
+function localOnlyGuard(req: any, res: any, next: any) {
+  if (isLocalRequest(req.ip) || isLocalRequest(req.socket?.remoteAddress)) {
+    next();
+    return;
+  }
+
+  res.status(403).json({ error: 'Forbidden' });
+}
 
 // Body parsing middleware
 app.use(express.json());
@@ -33,7 +53,8 @@ app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
 app.use('/api/huggingface', huggingfaceRouter);
 app.use('/api/preview', previewRouter);
-app.use('/api/workspace', workspaceRouter);
+app.use('/api/workspace', localOnlyGuard, workspaceRouter);
+app.use('/api/casper', localOnlyGuard, casperRouter);
 
 // Metrics endpoint
 app.get('/metrics', metricsHandler);
@@ -50,12 +71,13 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Export a function to start the server
-export async function startServer(port) {
+export async function startServer(port: number | string) {
   try {
     if (process.env.NODE_ENV === 'production') {
       setupStaticServing(app);
     }
-    const server = app.listen(port, () => {
+    const host = process.env.HOST || '127.0.0.1';
+    const server = app.listen(port, host, () => {
       console.log(`API Server running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Health check available at: http://localhost:${port}/api/health`);

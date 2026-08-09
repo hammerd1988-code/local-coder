@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { CASPER_NAME } from '../lib/casper';
 import { DEFAULT_WORKFLOW_ID, WORKFLOWS, getWorkflow } from '../lib/workflows';
 
 interface Message {
@@ -281,7 +282,8 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
         const files: { id: number; path: string }[] = await listRes.json();
 
         if (mode === 'project') {
-          const tree = files.map((f) => f.path).sort().join('\n') || '(empty workspace)';
+          const paths = files.map((f) => f.path).sort();
+          const tree = paths.slice(0, 500).join('\n') + (paths.length > 500 ? `\n…(${paths.length - 500} more)` : '');
           parts.push(`Workspace files:\n${tree}`);
         }
 
@@ -459,7 +461,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     <div className="h-full flex flex-col bg-black/60 backdrop-blur-sm">
       <div className="p-3 border-b border-cyan-500/30 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-purple-400 font-mono shrink-0">{'>'} AI Assistant</h2>
+          <h2 className="font-semibold text-purple-400 font-mono shrink-0">{'>'} {CASPER_NAME}</h2>
           <div className="flex gap-1">
           <Button size="sm" variant="ghost" onClick={clearChat} className="hover:bg-red-500/20 hover:text-red-400">
             <Trash2 className="h-4 w-4" />
@@ -547,7 +549,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
           <Workflow className="h-3.5 w-3.5 text-burgundy-300 shrink-0" />
           <Select value={workflowId} onValueChange={selectWorkflow}>
             <SelectTrigger className="h-8 flex-1 bg-black/40 border-burgundy-500/50 text-cyan-100 text-xs font-mono">
-              <SelectValue placeholder="Workflow" />
+              <SelectValue placeholder="Casper mode" />
             </SelectTrigger>
             <SelectContent className="bg-gray-950 border-burgundy-500/50 text-cyan-100 font-mono">
               {WORKFLOWS.map((w) => (
@@ -637,7 +639,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
             className="text-[10px] font-mono px-2 py-0.5 rounded border border-burgundy-500/50 text-burgundy-300 bg-burgundy-600/15"
             title={workflow.description}
           >
-            wf: {workflow.label}
+            casper: {workflow.label}
           </span>
           {workflow.contextMode === 'project' && (
             <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-purple-500/40 text-purple-300 bg-purple-500/10">

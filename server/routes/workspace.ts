@@ -17,9 +17,19 @@ router.get('/', async (_req, res) => {
 
 router.put('/', async (req, res) => {
   try {
-    const { root } = req.body as { root?: string | null };
-    const value = root === undefined ? null : root;
-    const saved = await setWorkspaceRoot(value && String(value).trim() ? String(value).trim() : null);
+    const body = req.body as { root?: string | null } | null | undefined;
+    if (!body || !Object.prototype.hasOwnProperty.call(body, 'root')) {
+      res.status(400).json({ error: 'root must be provided as a string or null' });
+      return;
+    }
+
+    const { root } = body;
+    if (root !== null && typeof root !== 'string') {
+      res.status(400).json({ error: 'root must be provided as a string or null' });
+      return;
+    }
+
+    const saved = await setWorkspaceRoot(root && root.trim() ? root.trim() : null);
     res.json({ root: saved, mode: saved ? 'disk' : 'database' });
     return;
   } catch (error) {

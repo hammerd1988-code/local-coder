@@ -23,15 +23,14 @@ router.get('/version', async (_req, res) => {
     const root = await getWorkspaceRoot();
     if (root) {
       const files = await listWorkspaceFiles(root);
+      const stats = await Promise.allSettled(
+        files.slice(0, 300).map((f) => fs.stat(resolveInWorkspace(root, f.path)))
+      );
       let latest = 0;
-      for (const f of files.slice(0, 300)) {
-        try {
-          const st = await fs.stat(resolveInWorkspace(root, f.path));
-          const t = Math.floor(st.mtimeMs / 1000);
-          if (t > latest) latest = t;
-        } catch {
-          // skip
-        }
+      for (const st of stats) {
+        if (st.status !== 'fulfilled') continue;
+        const t = Math.floor(st.value.mtimeMs / 1000);
+        if (t > latest) latest = t;
       }
       res.json({ version: `disk-${latest}-${files.length}` });
       return;
