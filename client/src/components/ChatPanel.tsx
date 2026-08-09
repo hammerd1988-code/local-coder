@@ -282,7 +282,8 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
         const files: { id: number; path: string }[] = await listRes.json();
 
         if (mode === 'project') {
-          const tree = files.map((f) => f.path).sort().join('\n') || '(empty workspace)';
+          const paths = files.map((f) => f.path).sort();
+          const tree = paths.slice(0, 500).join('\n') + (paths.length > 500 ? `\n…(${paths.length - 500} more)` : '');
           parts.push(`Workspace files:\n${tree}`);
         }
 
