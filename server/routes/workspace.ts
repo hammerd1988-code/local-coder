@@ -18,9 +18,11 @@ router.get('/', async (_req, res) => {
 router.put('/', async (req, res) => {
   try {
     const { root } = req.body as { root?: string | null };
-    const value = root === undefined ? null : root;
-    const saved = await setWorkspaceRoot(value && String(value).trim() ? String(value).trim() : null);
-    res.json({ root: saved, mode: saved ? 'disk' : 'database' });
+    if (root === undefined) {
+      res.status(400).json({ error: 'root is required (string or null)' });
+      return;
+    }
+    const saved = await setWorkspaceRoot(root && String(root).trim() ? String(root).trim() : null);
     return;
   } catch (error) {
     console.error('Error setting workspace:', error);
