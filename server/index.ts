@@ -29,7 +29,9 @@ function isLocalRequest(ip: string | undefined) {
 }
 
 function localOnlyGuard(req: any, res: any, next: any) {
-  if (isLocalRequest(req.ip) || isLocalRequest(req.socket?.remoteAddress)) {
+  // Use the socket remote address as the source of truth to avoid
+  // proxy-derived `req.ip` values being treated as local.
+  if (isLocalRequest(req.socket?.remoteAddress)) {
     next();
     return;
   }
