@@ -18,6 +18,25 @@ import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 const app = express();
 
+const LOCAL_ADDRESSES = new Set([
+  '127.0.0.1',
+  '::1',
+  '::ffff:127.0.0.1'
+]);
+
+function isLocalRequest(ip: string | undefined) {
+  return !!ip && LOCAL_ADDRESSES.has(ip);
+}
+
+function localOnlyGuard(req: any, res: any, next: any) {
+  if (isLocalRequest(req.ip) || isLocalRequest(req.socket?.remoteAddress)) {
+    next();
+    return;
+  }
+
+  res.status(403).json({ error: 'Forbidden' });
+}
+
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,8 +53,8 @@ app.use('/api/git', gitRouter);
 app.use('/api/terminal', terminalRouter);
 app.use('/api/huggingface', huggingfaceRouter);
 app.use('/api/preview', previewRouter);
-app.use('/api/workspace', workspaceRouter);
-app.use('/api/casper', casperRouter);
+app.use('/api/workspace', localOnlyGuard, workspaceRouter);
+app.use('/api/casper', localOnlyGuard, casperRouter);
 
 // Metrics endpoint
 app.get('/metrics', metricsHandler);
