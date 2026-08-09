@@ -17,12 +17,20 @@ router.get('/', async (_req, res) => {
 
 router.put('/', async (req, res) => {
   try {
-    const { root } = req.body as { root?: string | null };
-    if (root === undefined) {
-      res.status(400).json({ error: 'root is required (string or null)' });
+    const body = req.body as { root?: string | null } | null | undefined;
+    if (!body || !Object.prototype.hasOwnProperty.call(body, 'root')) {
+      res.status(400).json({ error: 'root must be provided as a string or null' });
       return;
     }
-    const saved = await setWorkspaceRoot(root && String(root).trim() ? String(root).trim() : null);
+
+    const { root } = body;
+    if (root !== null && typeof root !== 'string') {
+      res.status(400).json({ error: 'root must be provided as a string or null' });
+      return;
+    }
+
+    const saved = await setWorkspaceRoot(root && root.trim() ? root.trim() : null);
+    res.json({ root: saved, mode: saved ? 'disk' : 'database' });
     return;
   } catch (error) {
     console.error('Error setting workspace:', error);
