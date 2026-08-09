@@ -88,6 +88,7 @@ export const LOCAL_TOOL_SPECS = [
           message: { type: 'string' },
           branch_name: { type: 'string' },
           files: { type: 'string' },
+          count: { type: 'number', description: 'Max log entries (log only)' },
         },
         required: ['operation'],
       },
