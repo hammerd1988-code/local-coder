@@ -105,7 +105,7 @@ router.post('/apply', async (req: express.Request, res: express.Response) => {
 router.get('/:id', async (req: express.Request, res: express.Response) => {
   try {
     const root = await getWorkspaceRoot();
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
 
     if (root) {
       const file = await timeOperation(() => findById(root, id), fileOperationDuration, { operation: 'read' });
@@ -192,7 +192,7 @@ router.post('/', async (req: express.Request, res: express.Response) => {
 router.put('/:id', async (req: express.Request, res: express.Response) => {
   try {
     const { content, language } = req.body;
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     const root = await getWorkspaceRoot();
 
     if (root) {
@@ -241,7 +241,7 @@ router.put('/:id', async (req: express.Request, res: express.Response) => {
 // Delete file
 router.delete('/:id', async (req: express.Request, res: express.Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     const root = await getWorkspaceRoot();
 
     if (root) {
