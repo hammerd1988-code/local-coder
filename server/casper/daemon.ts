@@ -118,7 +118,7 @@ class CasperDaemon {
     socket.on('connect', () => {
       console.log(`[casper] connected to relay ${httpBase}/relay`);
       this.set({ connected: true, lastError: null });
-      this.send({ type: 'cli:register', token: '', machine });
+      this.send({ type: 'cli:register', token, machine });
       if (this.heartbeat) clearInterval(this.heartbeat);
       this.heartbeat = setInterval(() => {
         this.send({
