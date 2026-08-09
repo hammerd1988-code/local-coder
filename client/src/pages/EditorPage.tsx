@@ -9,6 +9,7 @@ import PluginsPanel from '../components/PluginsPanel';
 import GitPanel from '../components/GitPanel';
 import TerminalPanel from '../components/TerminalPanel';
 import PreviewPanel from '../components/PreviewPanel';
+import CasperPanel from '../components/CasperPanel';
 import RepoCloner from '../components/RepoCloner';
 import ApplyDiffDialog, { type PendingApply } from '../components/ApplyDiffDialog';
 import { Button } from '../components/ui/button';
@@ -26,7 +27,7 @@ export default function EditorPage() {
   const navigate = useNavigate();
   const [selectedFileId, setSelectedFileId] = React.useState<number | null>(null);
   const [editorTheme, setEditorTheme] = React.useState<string>('vs-dark');
-  const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git' | 'terminal' | 'preview' | 'build'>('chat');
+  const [rightPanel, setRightPanel] = React.useState<'chat' | 'plugins' | 'git' | 'terminal' | 'preview' | 'build' | 'casper'>('chat');
   const [bottomPanel, setBottomPanel] = React.useState(false);
   const [applyRequest, setApplyRequest] = React.useState<{ code: string; nonce: number } | null>(null);
   const [selectedFileIdTick, setSelectedFileIdTick] = React.useState(0);
@@ -164,7 +165,19 @@ export default function EditorPage() {
                 : 'text-gray-400 hover:text-cyan-400'
             }`}
           >
-            CHAT
+            CASPER
+          </Button>
+          <Button
+            onClick={() => setRightPanel('casper')}
+            variant="ghost"
+            className={`text-xs font-mono ${
+              rightPanel === 'casper'
+                ? 'bg-burgundy-600/25 text-burgundy-300 border border-burgundy-500/60 shadow-[0_0_12px_rgba(196,2,51,0.6)]'
+                : 'text-gray-400 hover:text-burgundy-300'
+            }`}
+            title="Link Casper to Blood Sweat Code / go online for remote"
+          >
+            REMOTE
           </Button>
           <Button
             onClick={() => setRightPanel('preview')}
@@ -289,6 +302,7 @@ export default function EditorPage() {
                     </Panel>
                   </PanelGroup>
                 )}
+                {rightPanel === 'casper' && <CasperPanel />}
                 {rightPanel === 'plugins' && <PluginsPanel />}
                 {rightPanel === 'git' && <GitPanel />}
                 {rightPanel === 'preview' && <PreviewPanel />}

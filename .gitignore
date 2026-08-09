@@ -49,3 +49,6 @@ coverage/
 # Misc
 *.tsbuildinfo
 .cache/
+.casper-ref/
+tmp-casper-protocol.ts
+data/local-coder/
