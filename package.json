@@ -8,6 +8,8 @@
     "start": "tsx watch scripts/dev.ts",
     "app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-local-coder.ps1",
     "app:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
+    "app:linux": "bash scripts/local-coder-launch.sh",
+    "app:linux:install": "bash scripts/install-linux-desktop.sh",
     "lint": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
     "test": "echo \"No tests configured yet\" && exit 0",
     "test:coverage": "echo \"No coverage configured yet\" && exit 0",

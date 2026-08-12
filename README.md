@@ -55,6 +55,33 @@ docker build -t local-coder .
 docker run -p 4000:4000 -v $(pwd)/data:/app/data local-coder
 ```
 
+### Linux Desktop Install (Ubuntu, etc.)
+
+Install Local Code as a desktop app with an application-menu launcher and a
+systemd user service that starts it automatically when you log in:
+
+```bash
+./scripts/install-linux-desktop.sh
+```
+
+This builds the production bundle (if needed), then installs — all per-user,
+no sudo required:
+
+- `~/.config/systemd/user/local-coder.service` — starts the server at login on port 4000
+- `~/.local/share/applications/local-coder.desktop` — "Local Code" in your app menu
+- the app icon
+
+Click **Local Code** in your application menu (or run `npm run app:linux`) to
+open the editor at http://localhost:4000. Useful commands:
+
+```bash
+systemctl --user status local-coder        # check the service
+systemctl --user restart local-coder       # restart after a rebuild
+./scripts/install-linux-desktop.sh --uninstall   # remove launcher + service
+```
+
+Set `LOCAL_CODER_PORT` before installing to use a different port.
+
 ### Production Build
 
 1. Build the application:
@@ -62,9 +89,11 @@ docker run -p 4000:4000 -v $(pwd)/data:/app/data local-coder
 npm run build
 ```
 
-2. Start production server:
+2. Start production server (the working directory must be `dist/` so the
+server can find its static files in `dist/public`; the extra `server/` level
+in the entry path is produced by the TypeScript build):
 ```bash
-NODE_ENV=production PORT=4000 node dist/index.js
+cd dist && NODE_ENV=production PORT=4000 node server/server/index.js
 ```
 
 ## Environment Variables
