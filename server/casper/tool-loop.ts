@@ -28,7 +28,16 @@ export interface ToolLoopHooks {
   onToolCall?: (name: string, args: Record<string, unknown>) => void;
   onToolResult?: (name: string, result: unknown) => void;
   shouldAbort?: () => boolean;
-  confirm?: (detail: string) => Promise<boolean>;
+  confirm?: (toolName: string, args: Record<string, unknown>, detail: string) => Promise<boolean>;
+}
+
+/** Tools that can change the machine — remote directives must be approved in confirm-remote mode. */
+const APPROVAL_REQUIRED = new Set(['local__shell', 'local__write_file']);
+
+function approvalDetail(name: string, args: Record<string, unknown>): string {
+  if (name === 'local__shell') return `run: ${String(args.command || '')}`;
+  const bytes = String(args.content ?? '').length;
+  return `write file: ${String(args.path || '')} (${bytes} bytes)`;
 }
 
 /**
@@ -106,10 +115,10 @@ export async function runCasperToolLoop(
         args = {};
       }
 
-      if (name === 'local__shell' && hooks.confirm) {
-        const ok = await hooks.confirm(String(args.command || ''));
+      if (APPROVAL_REQUIRED.has(name) && hooks.confirm) {
+        const ok = await hooks.confirm(name, args, approvalDetail(name, args));
         if (!ok) {
-          const denied = { ok: false, error: 'Operator denied this shell command.' };
+          const denied = { ok: false, error: 'Operator denied this action.' };
           hooks.onToolResult?.(name, denied);
           messages.push({
             role: 'tool',

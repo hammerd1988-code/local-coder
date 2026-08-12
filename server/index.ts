@@ -14,6 +14,8 @@ import huggingfaceRouter from './routes/huggingface.js';
 import previewRouter from './routes/preview.js';
 import workspaceRouter from './routes/workspace.js';
 import casperRouter from './routes/casper.js';
+import { casperDaemon } from './casper/daemon.js';
+import { getAccessToken } from './casper/config.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
 
 const app = express();
@@ -95,6 +97,16 @@ export async function startServer(port: number | string) {
 
     setupTerminalWebSocket(wss);
     console.log('Terminal WebSocket server initialized');
+
+    // Reconnect Casper to the relay on boot if this machine is already paired,
+    // so remote (phone/web) directives keep working across restarts.
+    getAccessToken()
+      .then((token) => {
+        if (!token) return;
+        console.log('[casper] machine is linked — auto-starting daemon');
+        return casperDaemon.start();
+      })
+      .catch((err) => console.warn('[casper] daemon auto-start failed:', err instanceof Error ? err.message : err));
 
     return server;
   } catch (err) {
