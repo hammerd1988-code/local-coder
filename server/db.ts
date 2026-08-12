@@ -83,6 +83,63 @@ console.log('Database path:', databasePath);
 
 const sqliteDb = new Database(databasePath);
 
+// Bootstrap the schema on fresh installs (idempotent).
+sqliteDb.exec(`
+  CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL,
+    content TEXT NOT NULL,
+    language TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS plugins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    config TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS git_branches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    is_current INTEGER NOT NULL DEFAULT 0,
+    last_commit TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS git_status (
+    id INTEGER PRIMARY KEY,
+    status TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS huggingface_models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_id TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    model_type TEXT NOT NULL,
+    size_mb REAL,
+    download_status TEXT NOT NULL DEFAULT 'pending',
+    download_progress REAL,
+    local_path TEXT,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    downloaded_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+`);
+
 export const db = new Kysely<DatabaseSchema>({
   dialect: new SqliteDialect({ database: sqliteDb }),
   log: ['query', 'error']
