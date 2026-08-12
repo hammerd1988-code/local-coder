@@ -79,7 +79,8 @@ export async function startServer(port: number | string) {
       setupStaticServing(app);
     }
     const host = process.env.HOST || '127.0.0.1';
-    const server = app.listen(port, host, () => {
+    const listenPort = typeof port === 'string' ? parseInt(port, 10) : port;
+    const server = app.listen(listenPort, host, () => {
       console.log(`API Server running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Health check available at: http://localhost:${port}/api/health`);

@@ -28,7 +28,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
 router.put('/:key', async (req: express.Request, res: express.Response) => {
   try {
     const { value } = req.body;
-    const key = req.params.key;
+    const key = String(req.params.key);
     const now = Math.floor(Date.now() / 1000);
     
     await db.insertInto('settings')
