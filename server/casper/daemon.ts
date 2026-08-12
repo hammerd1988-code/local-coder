@@ -35,6 +35,7 @@ class CasperDaemon {
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private pendingApprovals = new Map<string, (approved: boolean) => void>();
   private aborted = new Set<string>();
+  private active = new Set<string>();
   private listeners = new Set<Listener>();
   private status: DaemonStatus = {
     running: false,
@@ -135,7 +136,7 @@ class CasperDaemon {
       console.warn('[casper] connect_error', err.message);
       this.set({ connected: false, lastError: err.message });
       if (/invalid|revoked|required/i.test(err.message)) {
-        this.stop();
+        this.stop(`Relay rejected this machine's credentials (${err.message}). Unlink and pair again from the Casper panel.`);
       }
     });
 
@@ -160,8 +161,10 @@ class CasperDaemon {
           void this.executeDirective(message);
           break;
         case 'cli:abort':
-          this.aborted.add(message.directiveId);
-          this.pendingApprovals.get(message.directiveId)?.(false);
+          if (this.active.has(message.directiveId)) {
+            this.aborted.add(message.directiveId);
+            this.pendingApprovals.get(message.directiveId)?.(false);
+          }
           break;
         case 'cli:approval_response':
           this.pendingApprovals.get(message.directiveId)?.(message.approved);
@@ -175,7 +178,8 @@ class CasperDaemon {
     return this.getStatus();
   }
 
-  stop(): DaemonStatus {
+  /** Stop the daemon. An optional reason is kept as lastError so the UI can explain why. */
+  stop(reason: string | null = null): DaemonStatus {
     if (this.heartbeat) {
       clearInterval(this.heartbeat);
       this.heartbeat = null;
@@ -189,7 +193,7 @@ class CasperDaemon {
       running: false,
       connected: false,
       sessionId: null,
-      lastError: null,
+      lastError: reason,
     });
     console.log('[casper] daemon stopped');
     return this.getStatus();
@@ -222,6 +226,7 @@ class CasperDaemon {
 
   private async executeDirective(directive: DirectiveMessage) {
     const started = Date.now();
+    this.active.add(directive.id);
     this.set({ lastDirectiveAt: started });
     console.log(`[casper] directive [${directive.source}]: ${directive.command.slice(0, 120)}`);
 
@@ -256,15 +261,15 @@ class CasperDaemon {
             },
           });
         },
-        confirm: async (detail) => {
+        confirm: async (toolName, args, detail) => {
           if (approvalLevel === 'auto') return true;
           this.send({
             type: 'cli:approval_request',
             directiveId: directive.id,
             machineId: machine.machineId,
-            toolName: 'local__shell',
-            args: { command: detail },
-            reason: `Casper wants to run: ${detail}`,
+            toolName,
+            args,
+            reason: `Casper wants to ${detail}`,
           });
           return new Promise<boolean>((resolve) => {
             const timer = setTimeout(() => {
@@ -281,7 +286,6 @@ class CasperDaemon {
       });
 
       if (this.aborted.has(directive.id)) {
-        this.aborted.delete(directive.id);
         this.send({
           type: 'directive:complete',
           directiveId: directive.id,
@@ -299,7 +303,6 @@ class CasperDaemon {
       });
       console.log(`[casper] directive complete (${Date.now() - started}ms)`);
     } catch (e) {
-      this.aborted.delete(directive.id);
       const msg = e instanceof Error ? e.message : 'Directive failed';
       this.send({
         type: 'directive:complete',
@@ -308,6 +311,9 @@ class CasperDaemon {
         response: msg,
       });
       console.error('[casper] directive failed', msg);
+    } finally {
+      this.active.delete(directive.id);
+      this.aborted.delete(directive.id);
     }
   }
 }
