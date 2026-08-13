@@ -75,6 +75,11 @@ jobs:
       
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
+        # Requires the repository's Dependency graph to be enabled
+        # (Settings -> Advanced Security -> Dependency graph). Until then the
+        # action errors out, so don't block PRs on it. Remove this flag once
+        # the setting is enabled.
+        continue-on-error: true
         with:
           fail-on-severity: moderate
           deny-licenses: GPL-3.0, AGPL-3.0
