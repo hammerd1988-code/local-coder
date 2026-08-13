@@ -7,7 +7,9 @@ services:
       dockerfile: Dockerfile
     container_name: local-coder
     ports:
-      - "4000:4000"
+      # Loopback only: the integrated terminal is an unauthenticated shell and
+      # must not be reachable from the LAN
+      - "127.0.0.1:4000:4000"
     volumes:
       # Persistent data directory
       - ./data:/app/data
