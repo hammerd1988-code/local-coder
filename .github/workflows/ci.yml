@@ -64,7 +64,7 @@ jobs:
         run: npx tsc --project tsconfig.server.json
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
