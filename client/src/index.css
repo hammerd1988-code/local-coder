@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,4 +66,347 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ==========================================================================
+   SERVER OPS — cyberpunk theme
+   ========================================================================== */
+
+.ops-root {
+  --ops-bg: #04060c;
+  --ops-panel: rgba(8, 14, 26, 0.82);
+  --ops-cyan: #00f0ff;
+  --ops-magenta: #ff2bd6;
+  --ops-yellow: #fcee0a;
+  --ops-green: #39ff88;
+  --ops-red: #ff3b5b;
+  --ops-dim: #4a6b8a;
+  font-family: 'Share Tech Mono', ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Menlo, monospace;
+  background-color: var(--ops-bg);
+  color: #b8e6f5;
+  position: relative;
+}
+
+.ops-display {
+  font-family: 'Orbitron', 'Share Tech Mono', ui-monospace, monospace;
+  letter-spacing: 0.14em;
+}
+
+/* Perspective grid + radial glow backdrop */
+.ops-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0, 240, 255, 0.09), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 110%, rgba(255, 43, 214, 0.07), transparent 60%),
+    linear-gradient(rgba(0, 240, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+}
+
+/* CRT scanlines overlay */
+.ops-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.14) 0px,
+    rgba(0, 0, 0, 0.14) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+.ops-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 59;
+  background: radial-gradient(ellipse 120% 100% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* Neon clipped panel */
+.ops-panel {
+  background: var(--ops-panel);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  position: relative;
+  backdrop-filter: blur(6px);
+}
+
+.ops-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.06) 0%, transparent 30%);
+}
+
+.ops-panel-magenta {
+  border-color: rgba(255, 43, 214, 0.28);
+}
+
+.ops-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--ops-cyan);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.ops-glow-cyan {
+  color: var(--ops-cyan);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8), 0 0 24px rgba(0, 240, 255, 0.35);
+}
+
+.ops-glow-magenta {
+  color: var(--ops-magenta);
+  text-shadow: 0 0 6px rgba(255, 43, 214, 0.8), 0 0 24px rgba(255, 43, 214, 0.35);
+}
+
+.ops-glow-yellow {
+  color: var(--ops-yellow);
+  text-shadow: 0 0 6px rgba(252, 238, 10, 0.7), 0 0 20px rgba(252, 238, 10, 0.3);
+}
+
+.ops-glow-green {
+  color: var(--ops-green);
+  text-shadow: 0 0 6px rgba(57, 255, 136, 0.7), 0 0 20px rgba(57, 255, 136, 0.3);
+}
+
+.ops-glow-red {
+  color: var(--ops-red);
+  text-shadow: 0 0 6px rgba(255, 59, 91, 0.8), 0 0 20px rgba(255, 59, 91, 0.35);
+}
+
+/* Header title glitch */
+@keyframes ops-glitch-shift {
+  0%, 87%, 100% { transform: translate(0, 0); clip-path: inset(0 0 0 0); }
+  88% { transform: translate(-2px, 1px); clip-path: inset(10% 0 55% 0); }
+  90% { transform: translate(2px, -1px); clip-path: inset(60% 0 8% 0); }
+  92% { transform: translate(-1px, 0); clip-path: inset(30% 0 40% 0); }
+  94% { transform: translate(0, 0); clip-path: inset(0 0 0 0); }
+}
+
+.ops-glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.ops-glitch::before,
+.ops-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.ops-glitch::before {
+  color: var(--ops-magenta);
+  animation: ops-glitch-shift 5s infinite steps(1);
+  z-index: -1;
+}
+
+.ops-glitch::after {
+  color: var(--ops-cyan);
+  animation: ops-glitch-shift 5s infinite steps(1) reverse;
+  z-index: -2;
+}
+
+@keyframes ops-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.6; }
+  94% { opacity: 1; }
+  97% { opacity: 0.8; }
+  98% { opacity: 1; }
+}
+
+.ops-flicker {
+  animation: ops-flicker 6s infinite;
+}
+
+@keyframes ops-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.ops-pulse {
+  animation: ops-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ops-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.ops-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.10), transparent);
+  animation: ops-sweep 4.5s linear infinite;
+  pointer-events: none;
+}
+
+/* Buttons */
+.ops-btn {
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  color: var(--ops-cyan);
+  background: rgba(0, 240, 255, 0.06);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  transition: background 120ms, box-shadow 120ms, color 120ms;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ops-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.16);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35), inset 0 0 8px rgba(0, 240, 255, 0.12);
+}
+
+.ops-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ops-btn-magenta {
+  border-color: rgba(255, 43, 214, 0.45);
+  color: var(--ops-magenta);
+  background: rgba(255, 43, 214, 0.06);
+}
+
+.ops-btn-magenta:hover:not(:disabled) {
+  background: rgba(255, 43, 214, 0.16);
+  box-shadow: 0 0 12px rgba(255, 43, 214, 0.35), inset 0 0 8px rgba(255, 43, 214, 0.12);
+}
+
+.ops-btn-red {
+  border-color: rgba(255, 59, 91, 0.5);
+  color: var(--ops-red);
+  background: rgba(255, 59, 91, 0.07);
+}
+
+.ops-btn-red:hover:not(:disabled) {
+  background: rgba(255, 59, 91, 0.18);
+  box-shadow: 0 0 12px rgba(255, 59, 91, 0.4), inset 0 0 8px rgba(255, 59, 91, 0.12);
+}
+
+.ops-input {
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  font-size: 12px;
+  background: rgba(0, 12, 24, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #d7f6ff;
+  padding: 5px 10px;
+  outline: none;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.ops-input:focus {
+  border-color: rgba(0, 240, 255, 0.7);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
+.ops-input::placeholder {
+  color: rgba(74, 107, 138, 0.8);
+}
+
+/* Tables */
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ops-table th {
+  text-align: left;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: var(--ops-dim);
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  position: sticky;
+  top: 0;
+  background: #060b16;
+  z-index: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ops-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.06);
+  white-space: nowrap;
+}
+
+.ops-table tbody tr:hover {
+  background: rgba(0, 240, 255, 0.06);
+}
+
+/* Scrollbars */
+.ops-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ops-root ::-webkit-scrollbar-track {
+  background: rgba(0, 20, 34, 0.5);
+}
+
+.ops-root ::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.25);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+}
+
+.ops-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.45);
+}
+
+/* Nav rail */
+.ops-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ops-dim);
+  border-left: 2px solid transparent;
+  transition: all 140ms;
+  cursor: pointer;
+}
+
+.ops-nav-item:hover {
+  color: var(--ops-cyan);
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.ops-nav-item.active {
+  color: var(--ops-cyan);
+  border-left-color: var(--ops-cyan);
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.14), transparent);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+}
+
+.ops-nav-item.active .ops-nav-icon {
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.8));
 }
