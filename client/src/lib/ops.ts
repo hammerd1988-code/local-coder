@@ -129,7 +129,6 @@ export interface NodeSummary {
 export function nodeApiBase(node: Pick<NodeSummary, 'id' | 'type'>): string {
   return node.type === 'local' ? '' : `/nodes/${node.id}`;
 }
-
 export function formatBytes(n: number, digits = 1): string {
   if (!Number.isFinite(n)) return '—';
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
