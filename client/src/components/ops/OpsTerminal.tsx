@@ -4,13 +4,14 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { Plus, X } from 'lucide-react';
 import { OpsPanel, StatusDot } from './OpsPanel';
+import { useNode } from './NodeContext';
 
 interface Session {
   id: string;
   label: string;
 }
 
-function CyberTerm({ sessionId, active }: { sessionId: string; active: boolean }) {
+function CyberTerm({ sessionId, active, apiBase }: { sessionId: string; active: boolean; apiBase: string }) {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const fitRef = React.useRef<FitAddon | null>(null);
   const termRef = React.useRef<XTerm | null>(null);
@@ -59,7 +60,7 @@ function CyberTerm({ sessionId, active }: { sessionId: string; active: boolean }
     (async () => {
       let token = '';
       try {
-        const res = await fetch('/api/terminal/token');
+        const res = await fetch(`${apiBase}/api/terminal/token`);
         token = (await res.json()).token;
       } catch {
         term.writeln('\r\n\x1b[1;31m✖ AUTH LINK FAILURE — could not fetch session token\x1b[0m');
@@ -68,7 +69,7 @@ function CyberTerm({ sessionId, active }: { sessionId: string; active: boolean }
       if (disposed) return;
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/api/terminal?id=${sessionId}&token=${token}&profile=ops&cwd=/`);
+      const ws = new WebSocket(`${protocol}//${window.location.host}${apiBase}/api/terminal?id=${sessionId}&token=${token}&profile=ops&cwd=/`);
       sockRef.current = ws;
 
       ws.onopen = () => {
@@ -111,7 +112,7 @@ function CyberTerm({ sessionId, active }: { sessionId: string; active: boolean }
       sockRef.current?.close();
       term.dispose();
     };
-  }, [sessionId]);
+  }, [sessionId, apiBase]);
 
   React.useEffect(() => {
     if (active) setTimeout(() => fitRef.current?.fit(), 60);
@@ -128,6 +129,7 @@ function CyberTerm({ sessionId, active }: { sessionId: string; active: boolean }
 }
 
 export function OpsTerminal() {
+  const { apiBase } = useNode();
   const [sessions, setSessions] = React.useState<Session[]>([{ id: `ops-${Date.now()}`, label: 'SHELL-01' }]);
   const [activeId, setActiveId] = React.useState(sessions[0].id);
   const counter = React.useRef(1);
@@ -186,7 +188,7 @@ export function OpsTerminal() {
         bodyClassName="min-h-0"
       >
         {sessions.map((s) => (
-          <CyberTerm key={s.id} sessionId={s.id} active={s.id === activeId} />
+          <CyberTerm key={s.id} sessionId={s.id} active={s.id === activeId} apiBase={apiBase} />
         ))}
       </OpsPanel>
     </div>

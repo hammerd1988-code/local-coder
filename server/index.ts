@@ -16,6 +16,8 @@ import workspaceRouter from './routes/workspace.js';
 import casperRouter from './routes/casper.js';
 import systemRouter from './routes/system.js';
 import sysfsRouter from './routes/sysfs.js';
+import nodesRouter, { proxyNodeHttp, proxyNodeWs } from './routes/nodes.js';
+import { startTunnels, stopTunnels } from './ops/tunnels.js';
 import { casperDaemon } from './casper/daemon.js';
 import { getAccessToken } from './casper/config.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
@@ -43,6 +45,11 @@ function localOnlyGuard(req: any, res: any, next: any) {
   res.status(403).json({ error: 'Forbidden' });
 }
 
+// Single rack dashboard: proxy /nodes/:id/* to the selected node's own
+// NEO//OPS instance over its SSH tunnel. Mounted before body parsers so the
+// request body streams through untouched (uploads, SSE, etc.).
+app.use('/nodes/:id', (req, res) => proxyNodeHttp(req, res));
+
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -61,9 +68,12 @@ app.use('/api/huggingface', huggingfaceRouter);
 app.use('/api/preview', previewRouter);
 app.use('/api/workspace', localOnlyGuard, workspaceRouter);
 // Server Ops GUI: same trust model as the terminal WS (raw shell access) —
-// the server binds to localhost by default.
+// the server binds to localhost by default. Remote nodes are reached only via
+// the hub's per-node SSH tunnels (see routes/nodes.ts), never exposed on LAN.
 app.use('/api/system', systemRouter);
 app.use('/api/sysfs', sysfsRouter);
+// Node registry + live SSH-tunnel status for the single rack dashboard.
+app.use('/api/nodes', nodesRouter);
 app.use('/api/casper', localOnlyGuard, casperRouter);
 
 // Metrics endpoint
@@ -95,14 +105,33 @@ export async function startServer(port: number | string) {
       console.log(`Metrics available at: http://localhost:${port}/metrics`);
     });
 
-    // Setup WebSocket server for terminal
-    const wss = new WebSocketServer({ 
-      server,
-      path: '/api/terminal'
-    });
-
+    // Setup WebSocket server for terminal. Use `noServer` so we route upgrades
+    // ourselves: `/nodes/:id/...` upgrades are proxied to a remote node over
+    // its SSH tunnel; `/api/terminal` is served by the local PTY.
+    const wss = new WebSocketServer({ noServer: true });
     setupTerminalWebSocket(wss);
+
+    server.on('upgrade', (req, socket, head) => {
+      const url = req.url || '';
+      const nodeMatch = /^\/nodes\/([^/]+)(\/.*)$/.exec(url);
+      if (nodeMatch) {
+        proxyNodeWs(nodeMatch[1], nodeMatch[2], req, socket as any, head);
+        return;
+      }
+      if (url.split('?')[0] === '/api/terminal') {
+        wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+        return;
+      }
+      socket.destroy();
+    });
     console.log('Terminal WebSocket server initialized');
+
+    // Bring up SSH tunnels to any configured remote nodes.
+    startTunnels();
+    const shutdownTunnels = () => stopTunnels();
+    process.once('SIGTERM', shutdownTunnels);
+    process.once('SIGINT', shutdownTunnels);
+    process.once('exit', shutdownTunnels);
 
     // Reconnect Casper to the relay on boot if this machine is already paired,
     // so remote (phone/web) directives keep working across restarts.

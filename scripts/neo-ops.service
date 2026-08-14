@@ -1,0 +1,22 @@
+[Unit]
+Description=NEO//OPS server control deck
+Documentation=https://github.com/hammerd1988-code/local-coder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Root is required to read all files, signal any process, and control daemons.
+User=root
+# __INSTALL_DIR__ is replaced by install-neo-ops.sh with the real path.
+WorkingDirectory=__INSTALL_DIR__/dist
+ExecStart=/usr/bin/node server/server/index.js
+EnvironmentFile=__INSTALL_DIR__/neo-ops.env
+Restart=always
+RestartSec=3
+# Give SSH tunnels (hub mode) time to close cleanly on stop.
+TimeoutStopSec=15
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

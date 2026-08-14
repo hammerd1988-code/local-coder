@@ -3,6 +3,7 @@ import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from 'recharts';
 import { OpsPanel, StatusDot } from './OpsPanel';
 import { Gauge } from './Gauge';
 import { useTelemetry } from './useTelemetry';
+import { useNode } from './NodeContext';
 import { opsGet, formatBytes, formatRate, formatUptime, formatTimestamp, type Overview, type DiskInfo, type TelemetryFrame } from '@/lib/ops';
 
 function InfoRow({ k, v, accent }: { k: string; v: React.ReactNode; accent?: boolean }) {
@@ -53,7 +54,8 @@ function NeonTooltip({ active, payload, formatter }: any) {
 }
 
 export function OpsDashboard() {
-  const { frame, history, connected } = useTelemetry();
+  const { apiBase } = useNode();
+  const { frame, history, connected } = useTelemetry(apiBase);
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const [disks, setDisks] = React.useState<DiskInfo[]>([]);
 

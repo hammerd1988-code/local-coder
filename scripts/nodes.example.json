@@ -1,0 +1,15 @@
+{
+  "//": "NEO//OPS rack node registry. Copy to $DATA_DIRECTORY/nodes.json on the HUB node only.",
+  "//local": "The machine running this instance is always present as 'NODE-01' automatically; do not list it here.",
+  "//fields": "name (display), host (ip/dns reachable from the hub over SSH), user, port (ssh, default 22), remotePort (the node's own NEO//OPS port, default 4000), identityFile (optional private key path).",
+  "nodes": [
+    {
+      "name": "NODE-02",
+      "host": "10.0.0.12",
+      "user": "ubuntu",
+      "port": 22,
+      "remotePort": 4000,
+      "identityFile": "/root/.ssh/id_ed25519"
+    }
+  ]
+}
