@@ -1,10 +1,10 @@
-import { Kysely, SqliteDialect } from 'kysely';
+import { Generated, Kysely, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
 interface FilesTable {
-  id: number;
+  id: Generated<number>;
   path: string;
   content: string;
   language: string;
@@ -13,7 +13,7 @@ interface FilesTable {
 }
 
 interface ChatMessagesTable {
-  id: number;
+  id: Generated<number>;
   role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: number;
@@ -26,7 +26,7 @@ interface SettingsTable {
 }
 
 interface PluginsTable {
-  id: number;
+  id: Generated<number>;
   name: string;
   enabled: number;
   config: string;
@@ -35,7 +35,7 @@ interface PluginsTable {
 }
 
 interface GitBranchesTable {
-  id: number;
+  id: Generated<number>;
   name: string;
   is_current: number;
   last_commit: string | null;
@@ -49,7 +49,7 @@ interface GitStatusTable {
 }
 
 interface HuggingFaceModelsTable {
-  id: number;
+  id: Generated<number>;
   model_id: string;
   model_name: string;
   model_type: string;

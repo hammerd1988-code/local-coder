@@ -68,7 +68,14 @@ router.post('/apply', async (req: express.Request, res: express.Response) => {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const written = [];
+    const written: {
+      id: number;
+      path: string;
+      content: string;
+      language: string;
+      created_at: number;
+      updated_at: number;
+    }[] = [];
     for (const file of files) {
       const existing = await db.selectFrom('files').selectAll().where('path', '=', file.path).executeTakeFirst();
       if (existing) {
@@ -76,7 +83,7 @@ router.post('/apply', async (req: express.Request, res: express.Response) => {
           .set({ content: file.content, language: languageFromPath(file.path), updated_at: now })
           .where('id', '=', existing.id)
           .returning(['id', 'path', 'content', 'language', 'created_at', 'updated_at'])
-          .executeTakeFirst();
+          .executeTakeFirstOrThrow();
         written.push(row);
       } else {
         const row = await db.insertInto('files')
@@ -88,7 +95,7 @@ router.post('/apply', async (req: express.Request, res: express.Response) => {
             updated_at: now,
           })
           .returning(['id', 'path', 'content', 'language', 'created_at', 'updated_at'])
-          .executeTakeFirst();
+          .executeTakeFirstOrThrow();
         written.push(row);
       }
     }

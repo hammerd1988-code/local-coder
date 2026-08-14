@@ -76,18 +76,27 @@ router.get('/search', async (req, res) => {
     }
 
     // Search models using Hugging Face API
-    const models = [];
+    const models: {
+      id: string;
+      name: string;
+      type: string;
+      description: string;
+      downloads: number;
+      likes: number;
+      size_mb: number;
+      tags: string[];
+    }[] = [];
     for await (const model of listModels(searchParams)) {
       const modelData: any = model;
       models.push({
         id: model.id,
         name: model.id.split('/').pop() || model.id,
-        type: modelData.pipeline_tag || 'unknown',
-        description: modelData.cardData?.base_model || `Model: ${model.id}`,
+        type: String(modelData.pipeline_tag || 'unknown'),
+        description: String(modelData.cardData?.base_model || `Model: ${model.id}`),
         downloads: model.downloads || 0,
         likes: model.likes || 0,
         size_mb: 0, // Size not available in list API
-        tags: modelData.tags || []
+        tags: Array.isArray(modelData.tags) ? modelData.tags.map(String) : []
       });
 
       if (models.length >= limitNum) break;
@@ -128,6 +137,7 @@ router.post('/download', async (req, res) => {
     // Create local path
     const sanitizedId = model_id.replace(/[^a-zA-Z0-9-_]/g, '_');
     const localPath = path.join(modelsDirectory, sanitizedId);
+    const now = Math.floor(Date.now() / 1000);
 
     // Insert into database
     const result = await db
@@ -140,7 +150,10 @@ router.post('/download', async (req, res) => {
         download_status: 'downloading',
         download_progress: 0,
         local_path: localPath,
-        metadata: JSON.stringify(metadata)
+        metadata: JSON.stringify(metadata),
+        downloaded_at: null,
+        created_at: now,
+        updated_at: now
       })
       .executeTakeFirst();
 
