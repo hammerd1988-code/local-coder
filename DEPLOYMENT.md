@@ -1,13 +1,99 @@
 # Deployment Guide
 
-This guide covers deploying the Local Coder application using various methods.
+This guide covers deploying Local Coder and the **NEO//OPS** server control deck using various methods.
 
 ## Table of Contents
+- [NEO//OPS Server Deck (Bare Metal & Rack Clusters)](#neoops-server-deck-bare-metal--rack-clusters)
+  - [One-Shot Bootstrap Script](#one-shot-bootstrap-script)
+  - [Single Server Setup](#single-server-setup)
+  - [Multi-Node Rack Cluster (Single Dashboard)](#multi-node-rack-cluster-single-dashboard)
+  - [Adding Nodes Down the Road](#adding-nodes-down-the-road)
 - [Docker Deployment](#docker-deployment)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CI/CD Pipelines](#cicd-pipelines)
 - [Environment Variables](#environment-variables)
 - [Production Considerations](#production-considerations)
+
+---
+
+## NEO//OPS Server Deck (Bare Metal & Rack Clusters)
+
+NEO//OPS is designed to manage Ubuntu host servers directly (system telemetry, full-disk navigation, terminal, processes, daemons, network, logs).
+
+> **Important Security Architecture**: By default, NEO//OPS binds exclusively to `127.0.0.1:4000` on each node. Access from your workstation is secured using an SSH port forward (`ssh -L`), keeping the unauthenticated root-capability APIs completely off the public or LAN network.
+
+### One-Shot Bootstrap Script
+
+On any fresh Ubuntu Server node (e.g. Dell PowerEdge):
+
+```bash
+# Clone and run the automated installer as root:
+git clone https://github.com/hammerd1988-code/local-coder.git /opt/neo-ops
+sudo bash /opt/neo-ops/scripts/install-neo-ops.sh
+```
+
+The script automatically:
+1. Installs Node.js 22 LTS and native build toolchains (`build-essential`, `python3`)
+2. Runs `npm ci` and builds the production bundle (`dist/`)
+3. Writes the environment config (`/opt/neo-ops/neo-ops.env`)
+4. Configures and starts the `neo-ops.service` systemd daemon
+
+### Single Server Setup
+
+Once installed, connect to the server from your workstation using an SSH tunnel:
+
+```bash
+# Open SSH tunnel to the server
+ssh -L 4000:localhost:4000 ubuntu@<server-ip>
+
+# Open in browser:
+http://localhost:4000/ops
+```
+
+### Multi-Node Rack Cluster (Single Dashboard)
+
+To manage multiple nodes (e.g., a 4-node Dell PowerEdge rack) from a **single dashboard**:
+
+1. **Install NEO//OPS on every node** using `install-neo-ops.sh`.
+2. **Choose one node as the Hub** (e.g., `node1`).
+3. **Set up SSH key access from the Hub to peer nodes**:
+   ```bash
+   # On the Hub node (as root or the service user):
+   ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519
+   ssh-copy-id ubuntu@node2-ip
+   ssh-copy-id ubuntu@node3-ip
+   ssh-copy-id ubuntu@node4-ip
+   ```
+4. **Register the peer nodes on the Hub**:
+   - **Option A (Automated via installer)**:
+     ```bash
+     sudo bash /opt/neo-ops/scripts/install-neo-ops.sh \
+       --name "NODE-01" \
+       --peer "name=NODE-02,host=10.0.0.12,user=ubuntu" \
+       --peer "name=NODE-03,host=10.0.0.13,user=ubuntu" \
+       --peer "name=NODE-04,host=10.0.0.14,user=ubuntu"
+     ```
+   - **Option B (From the GUI)**:
+     Open the dashboard at `http://localhost:4000/ops`, click the **Node Switcher** in the top right header, click **`+`**, and enter the node details.
+   - **Option C (Configuration file)**:
+     Place a `nodes.json` in `/var/lib/neo-ops/nodes.json` (see `scripts/nodes.example.json`).
+
+5. **Access the entire cluster**:
+   ```bash
+   # Connect only to the Hub node:
+   ssh -L 4000:localhost:4000 ubuntu@<hub-ip>
+   ```
+   Open `http://localhost:4000/ops` — use the top-right Node Switcher to seamlessly switch between any node in the rack. All modules (telemetry, files, terminals, processes, services, network, logs) dynamically target the selected node.
+
+### Adding Nodes Down the Road
+
+When adding a new node to the cluster:
+1. Run `install-neo-ops.sh` on the new node.
+2. Ensure the Hub can SSH into it: `ssh-copy-id ubuntu@new-node-ip`.
+3. In the Hub's NEO//OPS web GUI, click the **Node Switcher** → **`+`** → Enter label & IP → **Establish Uplink**.
+4. The Hub instantly establishes the background SSH tunnel and the new node appears in your switcher roster without restarting the service.
+
+---
 
 ## Docker Deployment
 

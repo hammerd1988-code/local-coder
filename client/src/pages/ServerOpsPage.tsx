@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  LayoutDashboard, FolderTree, TerminalSquare, Cpu, ServerCog, Network, ScrollText, Code2,
+  LayoutDashboard, FolderTree, TerminalSquare, Cpu, ServerCog, Network, ScrollText, Code2, Server, Plus, Trash2, X,
 } from 'lucide-react';
+import { NodeProvider, useNode } from '@/components/ops/NodeContext';
 import { OpsDashboard } from '@/components/ops/OpsDashboard';
 import { OpsFiles } from '@/components/ops/OpsFiles';
 import { OpsTerminal } from '@/components/ops/OpsTerminal';
@@ -41,13 +42,157 @@ function Clock() {
   );
 }
 
-export default function ServerOpsPage() {
+const EMPTY_FORM = { name: '', host: '', user: 'root', port: '22', remotePort: '4000', identityFile: '' };
+
+function NodeSwitcher() {
+  const { nodes, selectedId, setSelectedId, envRegistry, addNode, removeNode } = useNode();
+  const [open, setOpen] = React.useState(false);
+  const [adding, setAdding] = React.useState(false);
+  const [form, setForm] = React.useState({ ...EMPTY_FORM });
+  const [error, setError] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const selected = nodes.find((n) => n.id === selectedId) ?? nodes[0];
+  const statusColor = (s: string) => (s === 'up' ? 'var(--ops-green)' : s === 'connecting' ? 'var(--ops-yellow)' : 'var(--ops-red)');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await addNode({
+        name: form.name.trim() || undefined,
+        host: form.host.trim(),
+        user: form.user.trim() || undefined,
+        port: parseInt(form.port, 10) || 22,
+        remotePort: parseInt(form.remotePort, 10) || 4000,
+        identityFile: form.identityFile.trim() || undefined,
+      });
+      setForm({ ...EMPTY_FORM });
+      setAdding(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string, name: string) => {
+    if (!window.confirm(`Remove node ${name} from the dashboard? (This only detaches it here; the node keeps running.)`)) return;
+    try {
+      await removeNode(id);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const field = (key: keyof typeof EMPTY_FORM, label: string, placeholder: string) => (
+    <label className="flex flex-col gap-0.5">
+      <span className="text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--ops-dim)' }}>{label}</span>
+      <input
+        className="ops-input !py-1"
+        style={{ clipPath: 'none' }}
+        value={form[key]}
+        placeholder={placeholder}
+        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+      />
+    </label>
+  );
+
+  return (
+    <div className="relative">
+      <button
+        className="flex items-center gap-2 px-3 py-1 border ops-sweep relative overflow-hidden"
+        style={{ borderColor: 'rgba(0,240,255,0.35)', background: 'rgba(0,240,255,0.05)' }}
+        onClick={() => setOpen((v) => !v)}
+        title="Switch / manage rack nodes"
+      >
+        <Server size={13} style={{ color: 'var(--ops-cyan)' }} />
+        <span className="ops-display text-xs ops-glow-cyan">{selected?.name ?? 'NODE-01'}</span>
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(selected?.status ?? 'down'), boxShadow: `0 0 6px ${statusColor(selected?.status ?? 'down')}` }} />
+        <span className="text-[9px]" style={{ color: 'var(--ops-dim)' }}>▼</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => { setOpen(false); setAdding(false); }} />
+          <div className="absolute right-0 mt-1 z-30 w-[300px] ops-panel" style={{ background: 'rgba(4,10,20,0.98)' }}>
+            <div className="px-3 py-1.5 flex items-center justify-between text-[9px] uppercase tracking-[0.24em] border-b" style={{ color: 'var(--ops-dim)', borderColor: 'rgba(0,240,255,0.15)' }}>
+              <span>Rack Nodes // {nodes.length}</span>
+              {!envRegistry && !adding && (
+                <button className="ops-btn !px-1.5 !py-0.5" onClick={() => { setAdding(true); setError(''); }} title="Add a node">
+                  <Plus size={11} />
+                </button>
+              )}
+            </div>
+
+            {nodes.map((n) => (
+              <div key={n.id} className={`ops-nav-item ${n.id === selectedId ? 'active' : ''} !cursor-default`} style={{ textTransform: 'none', letterSpacing: '0.05em' }}>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor(n.status), boxShadow: `0 0 6px ${statusColor(n.status)}` }} />
+                <button
+                  className="flex-1 text-left ops-display text-xs truncate"
+                  onClick={() => { setSelectedId(n.id); setOpen(false); }}
+                  title={n.type === 'ssh' ? `${n.user}@${n.host}${n.lastError ? ' — ' + n.lastError : ''}` : 'this machine'}
+                >
+                  {n.name}
+                </button>
+                <span className="text-[9px]" style={{ color: 'var(--ops-dim)' }}>
+                  {n.type === 'local' ? 'LOCAL' : n.status.toUpperCase()}
+                </span>
+                {n.type === 'ssh' && !envRegistry && (
+                  <button className="shrink-0 hover:text-red-400" style={{ color: 'var(--ops-dim)' }} onClick={() => remove(n.id, n.name)} title="Remove node">
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {error && <div className="px-3 py-1 text-[10px] ops-glow-red">⚠ {error}</div>}
+            {envRegistry && (
+              <div className="px-3 py-2 text-[9px] leading-relaxed" style={{ color: 'var(--ops-dim)' }}>
+                Registry pinned by OPS_NODES env — edit that to change nodes.
+              </div>
+            )}
+
+            {adding && (
+              <form onSubmit={submit} className="p-3 border-t flex flex-col gap-2" style={{ borderColor: 'rgba(0,240,255,0.15)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="ops-glow-cyan text-[10px] uppercase tracking-[0.2em]">New Node // SSH</span>
+                  <button type="button" onClick={() => setAdding(false)}><X size={11} style={{ color: 'var(--ops-dim)' }} /></button>
+                </div>
+                {field('name', 'Label', 'NODE-02')}
+                {field('host', 'Host', '10.0.0.12')}
+                <div className="grid grid-cols-2 gap-2">
+                  {field('user', 'SSH User', 'ubuntu')}
+                  {field('port', 'SSH Port', '22')}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {field('remotePort', 'Node Port', '4000')}
+                  {field('identityFile', 'Key Path', '/root/.ssh/id_ed25519')}
+                </div>
+                <button type="submit" className="ops-btn mt-1" disabled={busy || !form.host.trim()}>
+                  {busy ? 'LINKING…' : 'ESTABLISH UPLINK'}
+                </button>
+                <span className="text-[9px] leading-snug" style={{ color: 'var(--ops-dim)' }}>
+                  The hub reaches this node over SSH. Ensure this machine's key is authorized on it (ssh-copy-id).
+                </span>
+              </form>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OpsDeck() {
+  const { selectedId } = useNode();
   const [module, setModule] = React.useState<ModuleId>('dashboard');
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const [online, setOnline] = React.useState(false);
 
   React.useEffect(() => {
     document.title = 'NEO//OPS — Server Control Deck';
+    setOverview(null);
+    setOnline(false);
     const ping = () =>
       opsGet<Overview>('/api/system/overview')
         .then((o) => { setOverview(o); setOnline(true); })
@@ -55,7 +200,7 @@ export default function ServerOpsPage() {
     ping();
     const t = setInterval(ping, 15_000);
     return () => clearInterval(t);
-  }, []);
+  }, [selectedId]);
 
   // Keyboard shortcuts: Alt+1..7 switch modules
   React.useEffect(() => {
@@ -116,6 +261,7 @@ export default function ServerOpsPage() {
         </div>
 
         <div className="flex items-center gap-4">
+          <NodeSwitcher />
           <Link to="/" className="ops-btn !py-1" title="Open code editor">
             <Code2 size={11} className="inline mr-1" />Editor
           </Link>
@@ -150,8 +296,10 @@ export default function ServerOpsPage() {
           </div>
         </nav>
 
-        {/* Module viewport — Console stays mounted to keep PTY sessions alive */}
-        <main className="flex-1 min-w-0 min-h-0">
+        {/* Module viewport. Keyed by node so switching nodes remounts every
+            module (fresh fetches + new PTY sessions against the new host).
+            Console stays mounted across module switches to keep PTYs alive. */}
+        <main key={selectedId} className="flex-1 min-w-0 min-h-0">
           {module === 'dashboard' && <OpsDashboard />}
           {module === 'files' && <OpsFiles />}
           <div className={module === 'terminal' ? 'h-full' : 'hidden'}>
@@ -164,5 +312,13 @@ export default function ServerOpsPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function ServerOpsPage() {
+  return (
+    <NodeProvider>
+      <OpsDeck />
+    </NodeProvider>
   );
 }

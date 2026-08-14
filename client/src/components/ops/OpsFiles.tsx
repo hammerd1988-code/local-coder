@@ -5,7 +5,7 @@ import {
   PenLine, Shield, RefreshCw, Home, HardDrive, X, Save,
 } from 'lucide-react';
 import { OpsPanel } from './OpsPanel';
-import { opsGet, opsPost, formatBytes, formatTimestamp, type FsEntry } from '@/lib/ops';
+import { opsGet, opsPost, apiUrl, formatBytes, formatTimestamp, type FsEntry } from '@/lib/ops';
 
 const LANG_BY_EXT: Record<string, string> = {
   js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
@@ -134,13 +134,13 @@ export function OpsFiles() {
 
   const download = () => {
     if (!selected) return;
-    window.open(`/api/sysfs/download?path=${encodeURIComponent(joinPath(cwd, selected))}`, '_blank');
+    window.open(apiUrl(`/api/sysfs/download?path=${encodeURIComponent(joinPath(cwd, selected))}`), '_blank');
   };
 
   const upload = async (file: File) => {
     setError('');
     try {
-      const res = await fetch(`/api/sysfs/upload?path=${encodeURIComponent(joinPath(cwd, file.name))}`, {
+      const res = await fetch(apiUrl(`/api/sysfs/upload?path=${encodeURIComponent(joinPath(cwd, file.name))}`), {
         method: 'PUT',
         body: file,
       });
@@ -280,7 +280,7 @@ export function OpsFiles() {
                 {openFile.binary ? 'BINARY OBJECT' : 'FILE EXCEEDS 2MB EDIT LIMIT'}
               </div>
               <div className="text-xs" style={{ color: 'var(--ops-dim)' }}>{formatBytes(openFile.size)}</div>
-              <button className="ops-btn" onClick={() => window.open(`/api/sysfs/download?path=${encodeURIComponent(openFile.path)}`, '_blank')}>
+              <button className="ops-btn" onClick={() => window.open(apiUrl(`/api/sysfs/download?path=${encodeURIComponent(openFile.path)}`), '_blank')}>
                 <Download size={11} className="inline mr-1" />Download
               </button>
             </div>

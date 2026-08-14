@@ -78,15 +78,34 @@ export interface DiskInfo {
   mount: string;
 }
 
+// Active node base path. Empty string = the local hub machine; a remote node
+// is addressed via the hub's reverse proxy at `/nodes/<id>`. The NodeProvider
+// sets this synchronously whenever the operator switches nodes, and modules
+// remount on switch, so every subsequent request targets the chosen node.
+let activeApiBase = '';
+
+export function setActiveApiBase(base: string): void {
+  activeApiBase = base || '';
+}
+
+export function getActiveApiBase(): string {
+  return activeApiBase;
+}
+
+/** Prefix an `/api/...` path with the active node base. */
+export function apiUrl(path: string): string {
+  return `${activeApiBase}${path}`;
+}
+
 export async function opsGet<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(apiUrl(url));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as any)?.error ?? `HTTP ${res.status}`);
   return data as T;
 }
 
 export async function opsPost<T>(url: string, body?: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -94,6 +113,21 @@ export async function opsPost<T>(url: string, body?: unknown): Promise<T> {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as any)?.error ?? `HTTP ${res.status}`);
   return data as T;
+}
+
+export interface NodeSummary {
+  id: string;
+  name: string;
+  type: 'local' | 'ssh';
+  status: 'up' | 'connecting' | 'down';
+  host?: string;
+  user?: string;
+  restarts?: number;
+  lastError?: string;
+}
+
+export function nodeApiBase(node: Pick<NodeSummary, 'id' | 'type'>): string {
+  return node.type === 'local' ? '' : `/nodes/${node.id}`;
 }
 
 export function formatBytes(n: number, digits = 1): string {
