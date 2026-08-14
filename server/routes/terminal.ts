@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { randomBytes } from 'crypto';
+import { existsSync, statSync } from 'fs';
 import { spawn } from 'node-pty';
 import { WebSocketServer, WebSocket } from 'ws';
 import { terminalSessionsActive, terminalSessionsTotal, terminalDataTransferred, websocketConnectionsActive, websocketMessagesTotal } from '../metrics.js';
@@ -35,19 +36,34 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     terminalSessionsTotal.labels('created').inc();
 
     const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
-    
+
+    // "ops" profile: system shell for the Server Ops GUI — starts at the
+    // requested directory (or /) with a themed prompt and no alias spam.
+    const profile = url.searchParams.get('profile') === 'ops' ? 'ops' : 'default';
+    let cwd = profile === 'ops' ? '/' : dataDirectory;
+    const requestedCwd = url.searchParams.get('cwd');
+    if (requestedCwd) {
+      try {
+        if (existsSync(requestedCwd) && statSync(requestedCwd).isDirectory()) {
+          cwd = requestedCwd;
+        }
+      } catch { /* fall back to default cwd */ }
+    }
+
     // Spawn a shell process
     const shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
     const ptyProcess = spawn(shell, [], {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
-      cwd: dataDirectory,
+      cwd,
       env: {
         ...process.env,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
-        PS1: '\\[\\033[1;36m\\]λ\\[\\033[0m\\] \\[\\033[1;35m\\]\\w\\[\\033[0m\\] \\[\\033[1;32m\\]→\\[\\033[0m\\] ',
+        PS1: profile === 'ops'
+          ? '\\[\\033[1;35m\\]\\u\\[\\033[0m\\]\\[\\033[1;36m\\]@\\h\\[\\033[0m\\] \\[\\033[1;33m\\]\\w\\[\\033[0m\\] \\[\\033[1;36m\\]▸\\[\\033[0m\\] '
+          : '\\[\\033[1;36m\\]λ\\[\\033[0m\\] \\[\\033[1;35m\\]\\w\\[\\033[0m\\] \\[\\033[1;32m\\]→\\[\\033[0m\\] ',
       }
     });
 
@@ -82,7 +98,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     ];
 
     // Send aliases to the shell
-    if (shell === 'bash') {
+    if (shell === 'bash' && profile !== 'ops') {
       aliases.forEach(alias => {
         ptyProcess.write(`${alias}\r`);
       });

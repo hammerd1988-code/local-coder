@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import EditorPage from "./pages/EditorPage";
 import MetricsPage from "./pages/MetricsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
+import ServerOpsPage from "./pages/ServerOpsPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<EditorPage />} />
+        <Route path="/ops" element={<ServerOpsPage />} />
         <Route path="/metrics" element={<MetricsPage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

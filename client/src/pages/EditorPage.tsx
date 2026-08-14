@@ -13,7 +13,7 @@ import CasperPanel from '../components/CasperPanel';
 import RepoCloner from '../components/RepoCloner';
 import ApplyDiffDialog, { type PendingApply } from '../components/ApplyDiffDialog';
 import { Button } from '../components/ui/button';
-import { Activity, Plug } from 'lucide-react';
+import { Activity, Plug, ServerCog } from 'lucide-react';
 
 function stripPathComment(code: string): { path: string | null; body: string } {
   const first = code.split('\n')[0] ?? '';
@@ -250,6 +250,15 @@ export default function EditorPage() {
            >
              <Activity className="w-4 h-4" />
              METRICS
+           </Button>
+           <Button
+             onClick={() => navigate('/ops')}
+             variant="ghost"
+             className="text-xs font-mono text-gray-400 hover:text-fuchsia-400 gap-2"
+             title="Open the NEO//OPS server control deck"
+           >
+             <ServerCog className="w-4 h-4" />
+             SERVER OPS
            </Button>
         </div>
       </header>

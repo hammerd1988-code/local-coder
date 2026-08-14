@@ -14,6 +14,8 @@ import huggingfaceRouter from './routes/huggingface.js';
 import previewRouter from './routes/preview.js';
 import workspaceRouter from './routes/workspace.js';
 import casperRouter from './routes/casper.js';
+import systemRouter from './routes/system.js';
+import sysfsRouter from './routes/sysfs.js';
 import { casperDaemon } from './casper/daemon.js';
 import { getAccessToken } from './casper/config.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
@@ -58,6 +60,10 @@ app.use('/api/terminal', terminalRouter);
 app.use('/api/huggingface', huggingfaceRouter);
 app.use('/api/preview', previewRouter);
 app.use('/api/workspace', localOnlyGuard, workspaceRouter);
+// Server Ops GUI: same trust model as the terminal WS (raw shell access) —
+// the server binds to localhost by default.
+app.use('/api/system', systemRouter);
+app.use('/api/sysfs', sysfsRouter);
 app.use('/api/casper', localOnlyGuard, casperRouter);
 
 // Metrics endpoint
