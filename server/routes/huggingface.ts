@@ -140,7 +140,9 @@ router.post('/download', async (req, res) => {
         download_status: 'downloading',
         download_progress: 0,
         local_path: localPath,
-        metadata: JSON.stringify(metadata)
+        metadata: JSON.stringify(metadata),
+        created_at: Math.floor(Date.now() / 1000),
+        updated_at: Math.floor(Date.now() / 1000)
       })
       .executeTakeFirst();
 

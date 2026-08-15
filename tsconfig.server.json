@@ -5,6 +5,9 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "outDir": "dist/server",
+    // Kysely derives insert-time column optionality from `undefined` in
+    // Generated<T>, which only survives under strictNullChecks.
+    "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true

@@ -39,13 +39,13 @@ interface GitBranchesTable {
   name: string;
   is_current: Generated<number>;
   last_commit: string | null;
-  created_at: Generated<number>;
+  created_at: number;
 }
 
 interface GitStatusTable {
-  id: Generated<number>;
+  id: number;
   status: string;
-  updated_at: Generated<number>;
+  updated_at: number;
 }
 
 interface HuggingFaceModelsTable {
@@ -59,8 +59,8 @@ interface HuggingFaceModelsTable {
   local_path: string | null;
   metadata: Generated<string>;
   downloaded_at: Generated<number | null>;
-  created_at: Generated<number>;
-  updated_at: Generated<number>;
+  created_at: number;
+  updated_at: number;
 }
 
 export interface DatabaseSchema {

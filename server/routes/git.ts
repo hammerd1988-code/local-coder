@@ -69,7 +69,8 @@ router.get('/branches', async (req, res) => {
           .values({
             name: branch,
             is_current: branch === branches.current ? 1 : 0,
-            last_commit: null
+            last_commit: null,
+            created_at: Math.floor(Date.now() / 1000)
           })
           .execute();
     }
@@ -113,7 +114,8 @@ router.post('/branches', async (req, res) => {
       .values({
         name,
         is_current: 1,
-        last_commit: null
+        last_commit: null,
+        created_at: Math.floor(Date.now() / 1000)
       })
       .execute();
 
