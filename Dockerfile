@@ -1,5 +1,5 @@
 # Multi-stage build for production deployment
-FROM node:26-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Toolchain for native modules (node-pty, better-sqlite3) - alpine/musl has no
 # prebuilt binaries for them, so npm falls back to node-gyp
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:26-alpine
+FROM node:20-alpine
 
 # Install production dependencies
 WORKDIR /app
