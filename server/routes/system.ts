@@ -341,6 +341,70 @@ router.post('/services/:name/:action', async (req, res) => {
 // Network — interfaces + sockets
 // ---------------------------------------------------------------------------
 
+interface SocketRow {
+  proto: string;
+  state: string;
+  local: string;
+  peer: string;
+  process: string;
+}
+
+function parseSs(stdout: string): SocketRow[] {
+  return stdout
+    .split('\n')
+    .slice(1)
+    .filter((l) => l.trim())
+    .map((line) => {
+      const parts = line.trim().split(/\s+/);
+      const [proto, state, , , local, peer] = parts;
+      const proc = line.match(/users:\(\("([^"]+)",pid=(\d+)/);
+      return {
+        proto,
+        state,
+        local,
+        peer,
+        process: proc ? `${proc[1]} (${proc[2]})` : '',
+      };
+    })
+    .filter((s) => s.proto && s.local);
+}
+
+function parseNetstat(stdout: string): SocketRow[] {
+  return stdout
+    .split('\n')
+    .filter((l) => /^(tcp|udp)/.test(l.trim()))
+    .map((line) => {
+      const parts = line.trim().split(/\s+/);
+      const proto = parts[0];
+      // netstat omits the State column on UDP rows, shifting PID/Program left.
+      const isUdp = proto.startsWith('udp');
+      const program = isUdp ? parts[5] : parts[6];
+      const proc = program ? program.match(/^(\d+)\/(.+)$/) : null;
+      return {
+        proto,
+        state: isUdp ? '' : parts[5] ?? '',
+        local: parts[3] ?? '',
+        peer: parts[4] ?? '',
+        process: proc ? `${proc[2]} (${proc[1]})` : '',
+      };
+    })
+    .filter((s) => s.proto && s.local);
+}
+
+// Prefer iproute2, but minimal images often ship only net-tools (or neither),
+// in which case an unhandled failure would render the panel silently empty.
+async function listSockets(): Promise<SocketRow[]> {
+  let ss = await run('ss', ['-tulpn'], 8000);
+  if (ss.code !== 0) ss = await run('ss', ['-tuln'], 8000);
+  if (ss.code === 0 && ss.stdout.trim()) return parseSs(ss.stdout);
+
+  let ns = await run('netstat', ['-tulpn'], 8000);
+  if (ns.code !== 0) ns = await run('netstat', ['-tuln'], 8000);
+  if (ns.code === 0 && ns.stdout.trim()) return parseNetstat(ns.stdout);
+
+  return [];
+}
+
 router.get('/network', async (_req, res) => {
   const counters = await sampleNet();
   const interfaces = Object.entries(os.networkInterfaces()).map(([name, addrs]) => ({
@@ -350,28 +414,7 @@ router.get('/network', async (_req, res) => {
     txBytes: counters[name]?.tx ?? 0,
   }));
 
-  let sockets: any[] = [];
-  let ss = await run('ss', ['-tulpn'], 8000);
-  if (ss.code !== 0) ss = await run('ss', ['-tuln'], 8000);
-  if (ss.code === 0) {
-    sockets = ss.stdout
-      .split('\n')
-      .slice(1)
-      .filter((l) => l.trim())
-      .map((line) => {
-        const parts = line.trim().split(/\s+/);
-        const [proto, state, , , local, peer] = parts;
-        const proc = line.match(/users:\(\("([^"]+)",pid=(\d+)/);
-        return {
-          proto,
-          state,
-          local,
-          peer,
-          process: proc ? `${proc[1]} (${proc[2]})` : '',
-        };
-      })
-      .filter((s) => s.proto && s.local);
-  }
+  const sockets = await listSockets();
   res.json({ interfaces, sockets });
 });
 

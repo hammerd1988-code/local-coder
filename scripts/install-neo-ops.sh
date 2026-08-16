@@ -95,7 +95,8 @@ fi
 log "Installing system prerequisites…"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y curl git build-essential python3 ca-certificates openssh-client
+# iproute2 provides `ss`, which the network panel uses to list open sockets.
+apt-get install -y curl git build-essential python3 ca-certificates openssh-client iproute2
 
 # Node.js 20+ (NodeSource 22 LTS) if missing or too old.
 NEED_NODE=1
