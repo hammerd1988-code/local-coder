@@ -154,8 +154,6 @@ router.post('/download', async (req, res) => {
         downloaded_at: null,
         created_at: now,
         updated_at: now
-        created_at: Math.floor(Date.now() / 1000),
-        updated_at: Math.floor(Date.now() / 1000)
       })
       .executeTakeFirst();
 
