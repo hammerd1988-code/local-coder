@@ -212,7 +212,7 @@ export function metricsMiddleware(req: express.Request, res: express.Response, n
       httpResponseSize.labels(req.method, route).observe(responseSize);
     }
 
-    return originalEnd.apply(this, args);
+    return (originalEnd as (...endArgs: any[]) => any).apply(this, args);
   };
 
   next();

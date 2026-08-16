@@ -1,4 +1,5 @@
 import { Generated, Kysely, SqliteDialect } from 'kysely';
+import { Kysely, SqliteDialect, Generated } from 'kysely';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -28,8 +29,8 @@ interface SettingsTable {
 interface PluginsTable {
   id: Generated<number>;
   name: string;
-  enabled: number;
-  config: string;
+  enabled: Generated<number>;
+  config: Generated<string>;
   created_at: number;
   updated_at: number;
 }
@@ -37,7 +38,7 @@ interface PluginsTable {
 interface GitBranchesTable {
   id: Generated<number>;
   name: string;
-  is_current: number;
+  is_current: Generated<number>;
   last_commit: string | null;
   created_at: number;
 }
@@ -54,11 +55,11 @@ interface HuggingFaceModelsTable {
   model_name: string;
   model_type: string;
   size_mb: number | null;
-  download_status: 'pending' | 'downloading' | 'completed' | 'failed';
+  download_status: Generated<'pending' | 'downloading' | 'completed' | 'failed'>;
   download_progress: number | null;
   local_path: string | null;
-  metadata: string;
-  downloaded_at: number | null;
+  metadata: Generated<string>;
+  downloaded_at: Generated<number | null>;
   created_at: number;
   updated_at: number;
 }

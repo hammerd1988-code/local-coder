@@ -69,6 +69,7 @@
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "5.0.6",
     "@types/http-proxy": "^1.17.17",
     "@types/node": "^22.13.5",

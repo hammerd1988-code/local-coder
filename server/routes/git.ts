@@ -72,6 +72,7 @@ router.get('/branches', async (req, res) => {
             is_current: branch === branches.current ? 1 : 0,
             last_commit: null,
             created_at: createdAt
+            created_at: Math.floor(Date.now() / 1000)
           })
           .execute();
     }

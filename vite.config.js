@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
     ].filter(Boolean),
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './client/src'),
+        '@': path.resolve(import.meta.dirname, './client/src'),
       },
     },
     root: path.join(process.cwd(), 'client'),
