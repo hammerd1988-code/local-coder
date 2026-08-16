@@ -113,9 +113,11 @@ log "node $(node -v) / npm $(npm -v)"
 # Fetch / update the source.
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   log "Updating existing checkout in $INSTALL_DIR…"
-  git -C "$INSTALL_DIR" fetch --depth 1 origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout "$BRANCH"
-  git -C "$INSTALL_DIR" reset --hard "origin/$BRANCH"
+  # A shallow clone only tracks the branch it was created with, so fetch with an
+  # explicit refspec to make origin/$BRANCH exist before checking it out.
+  git -C "$INSTALL_DIR" fetch --depth 1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+  git -C "$INSTALL_DIR" checkout -B "$BRANCH" "refs/remotes/origin/$BRANCH"
+  git -C "$INSTALL_DIR" reset --hard "refs/remotes/origin/$BRANCH"
 else
   log "Cloning $REPO_URL ($BRANCH) into $INSTALL_DIR…"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
