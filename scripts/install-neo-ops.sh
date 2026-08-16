@@ -28,20 +28,43 @@
 #   --no-build         Skip npm ci + build (for config-only re-runs)
 #   -h, --help         Show this help
 #
+# Every option can also be given as an environment variable, which avoids
+# typing "--" on devices that autocorrect it into a dash character:
+#   NEO_OPS_REPO  NEO_OPS_BRANCH  NEO_OPS_DIR  NEO_OPS_PORT  NEO_OPS_DATA
+#   NEO_OPS_NAME  NEO_OPS_NO_BUILD
+# e.g.  sudo NEO_OPS_BRANCH=my-branch bash install-neo-ops.sh
+#
 set -euo pipefail
 
-REPO_URL=""
-BRANCH="main"
-INSTALL_DIR="/opt/neo-ops"
-PORT="4000"
-DATA_DIR="/var/lib/neo-ops"
-NODE_NAME="$(hostname)"
+REPO_URL="${NEO_OPS_REPO:-}"
+BRANCH="${NEO_OPS_BRANCH:-main}"
+INSTALL_DIR="${NEO_OPS_DIR:-/opt/neo-ops}"
+PORT="${NEO_OPS_PORT:-4000}"
+DATA_DIR="${NEO_OPS_DATA:-/var/lib/neo-ops}"
+NODE_NAME="${NEO_OPS_NAME:-$(hostname)}"
 DO_BUILD=1
+[[ -n "${NEO_OPS_NO_BUILD:-}" ]] && DO_BUILD=0
 PEERS=()
 
 log()  { printf '\033[1;36m[neo-ops]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[neo-ops]\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m[neo-ops] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# Phone keyboards and rich-text editors silently rewrite a leading "--" as an
+# em/en dash, which then arrives here as an unparseable option. Fold it back.
+if [[ $# -gt 0 ]]; then
+  NORMALIZED=()
+  for arg in "$@"; do
+    case "$arg" in
+      —*) arg="--${arg#—}" ;;
+      –*) arg="--${arg#–}" ;;
+      ―*) arg="--${arg#―}" ;;
+      −*) arg="--${arg#−}" ;;
+    esac
+    NORMALIZED+=("$arg")
+  done
+  set -- "${NORMALIZED[@]}"
+fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,9 +113,11 @@ log "node $(node -v) / npm $(npm -v)"
 # Fetch / update the source.
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   log "Updating existing checkout in $INSTALL_DIR…"
-  git -C "$INSTALL_DIR" fetch --depth 1 origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout "$BRANCH"
-  git -C "$INSTALL_DIR" reset --hard "origin/$BRANCH"
+  # A shallow clone only tracks the branch it was created with, so fetch with an
+  # explicit refspec to make origin/$BRANCH exist before checking it out.
+  git -C "$INSTALL_DIR" fetch --depth 1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+  git -C "$INSTALL_DIR" checkout -B "$BRANCH" "refs/remotes/origin/$BRANCH"
+  git -C "$INSTALL_DIR" reset --hard "refs/remotes/origin/$BRANCH"
 else
   log "Cloning $REPO_URL ($BRANCH) into $INSTALL_DIR…"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
