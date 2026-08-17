@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from '../db.js';
+import { resolveModel } from '../model-resolver.js';
 
 const router = express.Router();
 
@@ -135,10 +136,14 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
     if (provider === 'lmstudio') {
       // LM Studio speaks the OpenAI API: SSE lines carrying delta objects
       const baseUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
+      const target = await resolveModel('lmstudio', model, baseUrl);
+      if (!target) {
+        throw new Error('No model loaded in LM Studio — load one, or set a model name in settings.');
+      }
       const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, stream: true })
+        body: JSON.stringify({ model: target, messages, stream: true })
       });
 
       if (!response.ok || !response.body) {
@@ -156,10 +161,11 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
     } else {
       // Ollama streams newline-delimited JSON objects
       const baseUrl = setting('ollama_base_url') || 'http://localhost:11434';
+      const target = (await resolveModel('ollama', model, baseUrl)) || 'llama3';
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: model || 'llama3', messages, stream: true })
+        body: JSON.stringify({ model: target, messages, stream: true })
       });
 
       if (!response.ok || !response.body) {

@@ -4,10 +4,11 @@ import { simpleGit, type SimpleGit } from 'simple-git';
 import path from 'path';
 import { gitOperationsTotal, gitOperationDuration, gitBranchesCount, gitUnstagedChanges, timeOperation } from '../metrics.js';
 import { getWorkspaceRoot } from '../workspace.js';
+import { DATA_DIRECTORY } from '../data-dir.js';
 
 const router = Router();
 
-const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
+const dataDirectory = DATA_DIRECTORY;
 
 async function getGit(): Promise<SimpleGit> {
   const workspace = await getWorkspaceRoot();
