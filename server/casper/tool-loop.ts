@@ -1,6 +1,6 @@
 import { db } from '../db.js';
 import { LOCAL_TOOL_SPECS, runLocalTool } from './tools.js';
-import { resolveModel } from '../model-resolver.js';
+import { authHeaders, resolveModel } from '../model-resolver.js';
 
 /** Keep in sync with client/src/lib/casper.ts — coding-agent Casper (BSC CLI voice). */
 const CASPER_SYSTEM = `You are Casper — the ghost-in-the-machine AI agent for Blood Sweat Code, running inside Local Code on the user's machine.
@@ -21,6 +21,7 @@ async function getModelSettings() {
     model: get('model_name') || '',
     ollama: get('ollama_base_url') || 'http://localhost:11434',
     lmstudio: get('lmstudio_base_url') || 'http://localhost:1234',
+    lmstudioApiKey: get('lmstudio_api_key') || '',
   };
 }
 
@@ -52,7 +53,8 @@ export async function runCasperToolLoop(
   const settings = await getModelSettings();
   const providerBase = settings.provider === 'ollama' ? settings.ollama : settings.lmstudio;
   const base = `${providerBase.replace(/\/$/, '')}/v1`;
-  const model = await resolveModel(settings.provider, settings.model, providerBase);
+  const apiKey = settings.provider === 'ollama' ? '' : settings.lmstudioApiKey;
+  const model = await resolveModel(settings.provider, settings.model, providerBase, apiKey);
 
   const messages: ChatMsg[] = [
     { role: 'system', content: CASPER_SYSTEM },
@@ -65,7 +67,7 @@ export async function runCasperToolLoop(
 
     const response = await fetch(`${base}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders(apiKey) },
       body: JSON.stringify({
         model: model || undefined,
         messages,
@@ -79,7 +81,7 @@ export async function runCasperToolLoop(
       const errText = await response.text();
       // Fallback: no-tools completion (some local stacks reject tools)
       if (/tool/i.test(errText) || response.status === 400) {
-        return runPlainCompletion(base, model, messages, hooks);
+        return runPlainCompletion(base, model, messages, hooks, apiKey);
       }
       throw new Error(`Model error: ${response.status} ${errText.slice(0, 300)}`);
     }
@@ -149,11 +151,12 @@ async function runPlainCompletion(
   base: string,
   model: string | undefined,
   messages: ChatMsg[],
-  hooks: ToolLoopHooks
+  hooks: ToolLoopHooks,
+  apiKey?: string
 ): Promise<string> {
   const response = await fetch(`${base}/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(apiKey) },
     body: JSON.stringify({
       model: model || undefined,
       messages: messages.map((m) => ({ role: m.role, content: m.content || '' })),
