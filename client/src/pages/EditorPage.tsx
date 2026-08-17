@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { useNavigate } from 'react-router-dom';
 import FileExplorer from '../components/FileExplorer';
 import CodeEditor from '../components/CodeEditor';
