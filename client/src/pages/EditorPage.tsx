@@ -264,10 +264,10 @@ export default function EditorPage() {
       </header>
       
       <div className="flex-1 overflow-hidden">
-        <PanelGroup direction="vertical">
-          <Panel defaultSize={bottomPanel ? 70 : 100} minSize={30}>
-            <PanelGroup direction="horizontal">
-              <Panel defaultSize={20} minSize={15} maxSize={30}>
+        <PanelGroup orientation="vertical">
+          <Panel defaultSize={bottomPanel ? '70' : '100'} minSize="30">
+            <PanelGroup orientation="horizontal">
+              <Panel defaultSize="20" minSize="15" maxSize="30">
                 <FileExplorer 
                   selectedFileId={selectedFileId}
                   onSelectFile={setSelectedFileId}
@@ -276,7 +276,7 @@ export default function EditorPage() {
               
               <PanelResizeHandle className="w-1 bg-burgundy-600/50 hover:bg-burgundy-400 hover:shadow-[0_0_8px_rgba(196,2,51,0.8)] transition-all" />
               
-              <Panel defaultSize={50} minSize={30}>
+              <Panel defaultSize="50" minSize="30">
                 <div className="h-full flex flex-col">
                   <ThemeSwitcher theme={editorTheme} onThemeChange={handleThemeChange} />
                   <div className="flex-1">
@@ -287,7 +287,7 @@ export default function EditorPage() {
               
               <PanelResizeHandle className="w-1 bg-burgundy-600/50 hover:bg-burgundy-400 hover:shadow-[0_0_8px_rgba(196,2,51,0.8)] transition-all" />
               
-              <Panel defaultSize={rightPanel === 'build' ? 40 : 30} minSize={20} maxSize={55}>
+              <Panel defaultSize={rightPanel === 'build' ? '40' : '30'} minSize="20" maxSize="55">
                 {rightPanel === 'chat' && (
                   <ChatPanel
                     key={`chat-${selectedFileIdTick}`}
@@ -297,8 +297,8 @@ export default function EditorPage() {
                   />
                 )}
                 {rightPanel === 'build' && (
-                  <PanelGroup direction="vertical">
-                    <Panel defaultSize={55} minSize={30}>
+                  <PanelGroup orientation="vertical">
+                    <Panel defaultSize="55" minSize="30">
                       <ChatPanel
                         selectedFileId={selectedFileId}
                         onApplyCode={handleApplyCode}
@@ -306,7 +306,7 @@ export default function EditorPage() {
                       />
                     </Panel>
                     <PanelResizeHandle className="h-1 bg-burgundy-600/50 hover:bg-burgundy-400 hover:shadow-[0_0_8px_rgba(196,2,51,0.8)] transition-all" />
-                    <Panel defaultSize={45} minSize={20}>
+                    <Panel defaultSize="45" minSize="20">
                       <PreviewPanel />
                     </Panel>
                   </PanelGroup>
@@ -322,7 +322,7 @@ export default function EditorPage() {
           {bottomPanel && (
             <>
               <PanelResizeHandle className="h-1 bg-burgundy-600/50 hover:bg-burgundy-400 hover:shadow-[0_0_8px_rgba(196,2,51,0.8)] transition-all" />
-              <Panel defaultSize={30} minSize={15} maxSize={70}>
+              <Panel defaultSize="30" minSize="15" maxSize="70">
                 <TerminalPanel />
               </Panel>
             </>
