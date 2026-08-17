@@ -26,6 +26,9 @@ interface ProviderModels {
   models: string[];
 }
 
+/** Sentinel telling the server to use whichever model the provider has loaded. */
+const AUTO_MODEL = 'auto';
+
 interface ChatPanelProps {
   selectedFileId: number | null;
   onApplyCode?: (code: string) => void;
@@ -123,7 +126,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
   const [contextPath, setContextPath] = React.useState<string | null>(null);
   const [settings, setSettings] = React.useState({
     model_provider: 'lmstudio',
-    model_name: '',
+    model_name: AUTO_MODEL,
     ollama_base_url: 'http://localhost:11434',
     lmstudio_base_url: 'http://localhost:1234',
     chat_workflow: DEFAULT_WORKFLOW_ID,
@@ -227,7 +230,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     try {
       const response = await fetch('/api/settings');
       const data = await response.json();
-      setSettings((prev) => ({ ...prev, ...data }));
+      setSettings((prev) => ({ ...prev, ...data, model_name: data.model_name?.trim() || AUTO_MODEL }));
       if (data.chat_workflow) setWorkflowId(data.chat_workflow);
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -503,6 +506,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                         <SelectValue placeholder="Select model" />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-950 border-cyan-500/50 text-cyan-100">
+                        <SelectItem value={AUTO_MODEL}>Auto — whatever is loaded</SelectItem>
                         {providerModels.map((m) => (
                           <SelectItem key={m} value={m}>{m}</SelectItem>
                         ))}
@@ -517,6 +521,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                       />
                       <p className="text-xs text-purple-400/60 mt-1">
                         No models reported by {settings.model_provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} — is it running?
+                        Leave this as <code>auto</code> to use whichever model it has loaded.
                       </p>
                     </>
                   )}

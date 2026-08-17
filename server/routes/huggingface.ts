@@ -4,10 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import { listModels, downloadFile } from '@huggingface/hub';
+import { DATA_DIRECTORY } from '../data-dir.js';
 
 const router = express.Router();
 
-const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
+const dataDirectory = DATA_DIRECTORY;
 const modelsDirectory = path.join(dataDirectory, "huggingface-models");
 
 // Ensure models directory exists

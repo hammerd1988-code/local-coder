@@ -4,6 +4,7 @@ import { existsSync, statSync } from 'fs';
 import { spawn } from 'node-pty';
 import { WebSocketServer, WebSocket } from 'ws';
 import { terminalSessionsActive, terminalSessionsTotal, terminalDataTransferred, websocketConnectionsActive, websocketMessagesTotal } from '../metrics.js';
+import { DATA_DIRECTORY } from '../data-dir.js';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer) {
     websocketConnectionsActive.labels('terminal').inc();
     terminalSessionsTotal.labels('created').inc();
 
-    const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
+    const dataDirectory = DATA_DIRECTORY;
 
     // "ops" profile: system shell for the Server Ops GUI — starts at the
     // requested directory (or /) with a themed prompt and no alias spam.
