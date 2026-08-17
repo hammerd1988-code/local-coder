@@ -65,13 +65,14 @@ router.get('/branches', async (req, res) => {
     await db.deleteFrom('git_branches').execute();
     
     for (const branch of branches.all) {
+      const createdAt = Math.floor(Date.now() / 1000);
       await db
           .insertInto('git_branches')
           .values({
             name: branch,
             is_current: branch === branches.current ? 1 : 0,
             last_commit: null,
-            created_at: Math.floor(Date.now() / 1000)
+            created_at: createdAt
           })
           .execute();
     }
