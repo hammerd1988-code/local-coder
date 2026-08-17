@@ -3,6 +3,14 @@ import { db } from '../db.js';
 
 const router = express.Router();
 
+/**
+ * Keys holding secrets. Their values never leave the server: GET returns the
+ * placeholder instead, and PUTs of the placeholder are ignored so a client
+ * echoing settings back doesn't clobber the stored secret.
+ */
+const SECRET_KEYS = new Set(['lmstudio_api_key']);
+export const SECRET_PLACEHOLDER = '********';
+
 // Get all settings
 router.get('/', async (req: express.Request, res: express.Response) => {
   try {
@@ -11,7 +19,9 @@ router.get('/', async (req: express.Request, res: express.Response) => {
       .execute();
     
     const settingsObj = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
+      acc[setting.key] = SECRET_KEYS.has(setting.key) && setting.value
+        ? SECRET_PLACEHOLDER
+        : setting.value;
       return acc;
     }, {} as Record<string, string>);
     
@@ -30,13 +40,18 @@ router.put('/:key', async (req: express.Request, res: express.Response) => {
     const { value } = req.body;
     const key = String(req.params.key);
     const now = Math.floor(Date.now() / 1000);
-    
+
+    if (SECRET_KEYS.has(key) && value === SECRET_PLACEHOLDER) {
+      res.json({ key, value: SECRET_PLACEHOLDER });
+      return;
+    }
+
     await db.insertInto('settings')
       .values({ key, value, updated_at: now })
       .onConflict((oc) => oc.column('key').doUpdateSet({ value, updated_at: now }))
       .execute();
     
-    res.json({ key, value });
+    res.json({ key, value: SECRET_KEYS.has(key) && value ? SECRET_PLACEHOLDER : value });
     return;
   } catch (error) {
     console.error('Error updating setting:', error);
