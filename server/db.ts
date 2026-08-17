@@ -1,7 +1,7 @@
 import { Kysely, SqliteDialect, Generated } from 'kysely';
 import Database from 'better-sqlite3';
 import path from 'path';
-import fs from 'fs';
+import { DATA_DIRECTORY } from './data-dir.js';
 
 interface FilesTable {
   id: Generated<number>;
@@ -73,10 +73,7 @@ export interface DatabaseSchema {
   huggingface_models: HuggingFaceModelsTable;
 }
 
-const dataDirectory = process.env.DATA_DIRECTORY ?? "/home/app/data";
-if (!fs.existsSync(dataDirectory)) {
-  fs.mkdirSync(dataDirectory, { recursive: true });
-}
+const dataDirectory = DATA_DIRECTORY;
 
 const databasePath = path.join(dataDirectory, "database.sqlite");
 console.log('Database path:', databasePath);

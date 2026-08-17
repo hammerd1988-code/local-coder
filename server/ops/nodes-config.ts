@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { DATA_DIRECTORY } from '../data-dir.js';
 
 // Node registry for the "single rack dashboard". One hub instance fronts the
 // local machine plus any number of remote nodes reached over SSH tunnels.
@@ -18,7 +19,7 @@ export interface RemoteNodeConfig {
   localPort?: number; // local tunnel port the hub binds for this node
 }
 
-const DATA_DIR = process.env.DATA_DIRECTORY ?? '/home/app/data';
+const DATA_DIR = DATA_DIRECTORY;
 const TUNNEL_PORT_BASE = 4100;
 
 function slug(name: string, index: number): string {

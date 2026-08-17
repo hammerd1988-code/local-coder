@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import { LOCAL_TOOL_SPECS, runLocalTool } from './tools.js';
+import { resolveModel } from '../model-resolver.js';
 
 /** Keep in sync with client/src/lib/casper.ts — coding-agent Casper (BSC CLI voice). */
 const CASPER_SYSTEM = `You are Casper — the ghost-in-the-machine AI agent for Blood Sweat Code, running inside Local Code on the user's machine.
@@ -49,10 +50,9 @@ export async function runCasperToolLoop(
   hooks: ToolLoopHooks = {}
 ): Promise<string> {
   const settings = await getModelSettings();
-  const base =
-    settings.provider === 'ollama'
-      ? `${settings.ollama.replace(/\/$/, '')}/v1`
-      : `${settings.lmstudio.replace(/\/$/, '')}/v1`;
+  const providerBase = settings.provider === 'ollama' ? settings.ollama : settings.lmstudio;
+  const base = `${providerBase.replace(/\/$/, '')}/v1`;
+  const model = await resolveModel(settings.provider, settings.model, providerBase);
 
   const messages: ChatMsg[] = [
     { role: 'system', content: CASPER_SYSTEM },
@@ -67,7 +67,7 @@ export async function runCasperToolLoop(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: settings.model || undefined,
+        model: model || undefined,
         messages,
         tools: LOCAL_TOOL_SPECS,
         tool_choice: 'auto',
@@ -79,7 +79,7 @@ export async function runCasperToolLoop(
       const errText = await response.text();
       // Fallback: no-tools completion (some local stacks reject tools)
       if (/tool/i.test(errText) || response.status === 400) {
-        return runPlainCompletion(base, settings.model, messages, hooks);
+        return runPlainCompletion(base, model, messages, hooks);
       }
       throw new Error(`Model error: ${response.status} ${errText.slice(0, 300)}`);
     }
@@ -147,7 +147,7 @@ export async function runCasperToolLoop(
 
 async function runPlainCompletion(
   base: string,
-  model: string,
+  model: string | undefined,
   messages: ChatMsg[],
   hooks: ToolLoopHooks
 ): Promise<string> {
