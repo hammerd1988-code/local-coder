@@ -1,4 +1,3 @@
-import { Generated, Kysely, SqliteDialect } from 'kysely';
 import { Kysely, SqliteDialect, Generated } from 'kysely';
 import Database from 'better-sqlite3';
 import path from 'path';
