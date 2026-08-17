@@ -1,6 +1,6 @@
 import express from 'express';
 import { db } from '../db.js';
-import { resolveModel } from '../model-resolver.js';
+import { authHeaders, resolveModel } from '../model-resolver.js';
 
 const router = express.Router();
 
@@ -79,7 +79,10 @@ router.get('/models', async (_req: express.Request, res: express.Response) => {
 
   const lmstudioUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
   try {
-    const r = await fetch(`${lmstudioUrl}/v1/models`, { signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${lmstudioUrl}/v1/models`, {
+      headers: authHeaders(setting('lmstudio_api_key')),
+      signal: AbortSignal.timeout(3000),
+    });
     const data = await r.json();
     result.push({ provider: 'lmstudio', models: (data.data ?? []).map((m: any) => m.id) });
   } catch {
@@ -136,13 +139,14 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
     if (provider === 'lmstudio') {
       // LM Studio speaks the OpenAI API: SSE lines carrying delta objects
       const baseUrl = setting('lmstudio_base_url') || 'http://localhost:1234';
-      const target = await resolveModel('lmstudio', model, baseUrl);
+      const apiKey = setting('lmstudio_api_key');
+      const target = await resolveModel('lmstudio', model, baseUrl, apiKey);
       if (!target) {
-        throw new Error('No model loaded in LM Studio — load one, or set a model name in settings.');
+        throw new Error('No model loaded in LM Studio — load one, or set a model name in settings. If LM Studio requires an API token, set it in settings.');
       }
       const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders(apiKey) },
         body: JSON.stringify({ model: target, messages, stream: true })
       });
 

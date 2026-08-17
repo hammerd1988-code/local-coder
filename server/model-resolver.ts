@@ -16,10 +16,19 @@ export function isAutoModel(model: string | undefined | null): boolean {
 
 const trimSlash = (url: string) => url.replace(/\/$/, '');
 
+/** Bearer header for servers with authentication enabled (e.g. LM Studio API tokens). */
+export function authHeaders(apiKey: string | undefined | null): Record<string, string> {
+  const key = (apiKey ?? '').trim();
+  return key ? { Authorization: `Bearer ${key}` } : {};
+}
+
 /** LM Studio's native REST surface reports per-model load state; /v1 does not. */
-async function lmstudioLoadedModel(baseUrl: string): Promise<string | undefined> {
+async function lmstudioLoadedModel(baseUrl: string, apiKey?: string): Promise<string | undefined> {
   try {
-    const r = await fetch(`${trimSlash(baseUrl)}/api/v0/models`, { signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${trimSlash(baseUrl)}/api/v0/models`, {
+      headers: authHeaders(apiKey),
+      signal: AbortSignal.timeout(3000),
+    });
     if (!r.ok) return undefined;
     const data = await r.json();
     const models: any[] = data.data ?? [];
@@ -30,9 +39,12 @@ async function lmstudioLoadedModel(baseUrl: string): Promise<string | undefined>
   }
 }
 
-async function firstOpenAiModel(baseUrl: string): Promise<string | undefined> {
+async function firstOpenAiModel(baseUrl: string, apiKey?: string): Promise<string | undefined> {
   try {
-    const r = await fetch(`${trimSlash(baseUrl)}/v1/models`, { signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${trimSlash(baseUrl)}/v1/models`, {
+      headers: authHeaders(apiKey),
+      signal: AbortSignal.timeout(3000),
+    });
     if (!r.ok) return undefined;
     const data = await r.json();
     return (data.data ?? [])[0]?.id;
@@ -55,10 +67,11 @@ async function firstOllamaModel(baseUrl: string): Promise<string | undefined> {
 export async function resolveModel(
   provider: string,
   configuredModel: string | undefined,
-  baseUrl: string
+  baseUrl: string,
+  apiKey?: string
 ): Promise<string | undefined> {
   if (!isAutoModel(configuredModel)) return (configuredModel ?? '').trim();
 
   if (provider === 'ollama') return firstOllamaModel(baseUrl);
-  return (await lmstudioLoadedModel(baseUrl)) ?? (await firstOpenAiModel(baseUrl));
+  return (await lmstudioLoadedModel(baseUrl, apiKey)) ?? (await firstOpenAiModel(baseUrl, apiKey));
 }
