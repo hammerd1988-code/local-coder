@@ -129,6 +129,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     model_name: AUTO_MODEL,
     ollama_base_url: 'http://localhost:11434',
     lmstudio_base_url: 'http://localhost:1234',
+    lmstudio_api_key: '',
     chat_workflow: DEFAULT_WORKFLOW_ID,
   });
   const [workflowId, setWorkflowId] = React.useState(DEFAULT_WORKFLOW_ID);
@@ -262,7 +263,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
 
   async function saveSettings() {
     try {
-      for (const key of ['model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url'] as const) {
+      for (const key of ['model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url', 'lmstudio_api_key'] as const) {
         await fetch(`/api/settings/${key}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -532,6 +533,17 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                     id="lmstudio-url"
                     value={settings.lmstudio_base_url}
                     onChange={(e) => setSettings({ ...settings, lmstudio_base_url: e.target.value })}
+                    className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lmstudio-api-key" className="text-purple-300">LM Studio API Token</Label>
+                  <Input
+                    id="lmstudio-api-key"
+                    type="password"
+                    value={settings.lmstudio_api_key}
+                    onChange={(e) => setSettings({ ...settings, lmstudio_api_key: e.target.value })}
+                    placeholder="Only if LM Studio requires an API token"
                     className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
                 </div>
