@@ -50,6 +50,12 @@ log()  { printf '\033[1;36m[neo-ops]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[neo-ops]\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m[neo-ops] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
+# Real escape bytes, for use inside the closing heredoc. `cat` emits a literal
+# "\033[1;32m" rather than interpreting it the way printf's format string does.
+C_GREEN=$'\033[1;32m'
+C_CYAN=$'\033[1;36m'
+C_RESET=$'\033[0m'
+
 # Phone keyboards and rich-text editors silently rewrite a leading "--" as an
 # em/en dash, which then arrives here as an unparseable option. Fold it back.
 if [[ $# -gt 0 ]]; then
@@ -193,12 +199,12 @@ systemctl --no-pager --lines=0 status neo-ops || true
 
 cat <<EOF
 
-\033[1;32m════════════════════════════════════════════════════════════════\033[0m
- NEO//OPS is installed and running on \033[1;36m$NODE_NAME\033[0m (127.0.0.1:$PORT)
+${C_GREEN}════════════════════════════════════════════════════════════════${C_RESET}
+ NEO//OPS is installed and running on ${C_CYAN}${NODE_NAME}${C_RESET} (127.0.0.1:$PORT)
 
  Reach the dashboard from your workstation via an SSH tunnel:
-   \033[1;36mssh -L $PORT:localhost:$PORT $(logname 2>/dev/null || echo user)@$(hostname -I 2>/dev/null | awk '{print $1}')\033[0m
- then open  \033[1;36mhttp://localhost:$PORT/ops\033[0m
+   ${C_CYAN}ssh -L $PORT:localhost:$PORT $(logname 2>/dev/null || echo user)@$(hostname -I 2>/dev/null | awk '{print $1}')${C_RESET}
+ then open  ${C_CYAN}http://localhost:$PORT/ops${C_RESET}
 
  Manage the service:
    systemctl {status|restart|stop} neo-ops
@@ -207,5 +213,5 @@ cat <<EOF
  Add more rack nodes later: use the node switcher (top-right of the
  dashboard) → "+", or re-run with --peer "name=NODE-02,host=10.0.0.12,user=ubuntu".
  (The hub needs SSH key access to each peer: ssh-copy-id user@peer.)
-\033[1;32m════════════════════════════════════════════════════════════════\033[0m
+${C_GREEN}════════════════════════════════════════════════════════════════${C_RESET}
 EOF
