@@ -302,7 +302,6 @@ export default function EditorPage() {
                 {rightPanel === 'build' && (
                   <PanelGroup orientation="vertical">
                     <Panel defaultSize={55} minSize={30}>
-                    <Panel defaultSize="55" minSize="30">
                       <ChatPanel
                         selectedFileId={selectedFileId}
                         onApplyCode={handleApplyCode}
