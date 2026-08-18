@@ -264,9 +264,9 @@ export default function EditorPage() {
       </header>
       
       <div className="flex-1 overflow-hidden">
-        <PanelGroup direction="vertical">
+        <PanelGroup orientation="vertical">
           <Panel defaultSize={bottomPanel ? 70 : 100} minSize={30}>
-            <PanelGroup direction="horizontal">
+            <PanelGroup orientation="horizontal">
               <Panel defaultSize={20} minSize={15} maxSize={30}>
                 <FileExplorer 
                   selectedFileId={selectedFileId}
@@ -297,7 +297,7 @@ export default function EditorPage() {
                   />
                 )}
                 {rightPanel === 'build' && (
-                  <PanelGroup direction="vertical">
+                  <PanelGroup orientation="vertical">
                     <Panel defaultSize={55} minSize={30}>
                       <ChatPanel
                         selectedFileId={selectedFileId}
