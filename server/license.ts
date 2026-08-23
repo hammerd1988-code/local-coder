@@ -65,7 +65,10 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
         valid: true,
         tier: data.tier as LicenseTier,
         hostedAi: Boolean(data.features?.hostedAi),
-        remoteNodeLimit: data.features?.remoteNodeLimit ?? 0,
+        remoteNodeLimit:
+          data.features?.remoteNodeLimit === null || typeof data.features?.remoteNodeLimit === 'number'
+            ? data.features.remoteNodeLimit
+            : 0,
       };
     } else {
       status = { ...UNLINKED, linked: true, error: data.error || `Verification failed (${res.status})` };
