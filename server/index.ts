@@ -21,6 +21,7 @@ import { startTunnels, stopTunnels } from './ops/tunnels.js';
 import { casperDaemon } from './casper/daemon.js';
 import { getAccessToken } from './casper/config.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
+import { getLicenseStatus, invalidateLicenseCache } from './license.js';
 
 const app = express();
 
@@ -75,6 +76,15 @@ app.use('/api/sysfs', sysfsRouter);
 // Node registry + live SSH-tunnel status for the single rack dashboard.
 app.use('/api/nodes', nodesRouter);
 app.use('/api/casper', localOnlyGuard, casperRouter);
+
+// BSC license status for the UI (tier + unlocked features; never the key itself).
+app.get('/api/license/status', async (_req, res) => {
+  res.json(await getLicenseStatus());
+});
+app.post('/api/license/refresh', localOnlyGuard, async (_req, res) => {
+  invalidateLicenseCache();
+  res.json(await getLicenseStatus());
+});
 
 // Metrics endpoint
 app.get('/metrics', metricsHandler);
