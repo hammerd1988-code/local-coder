@@ -57,7 +57,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-is": "^19.2.8",
-    "react-resizable-panels": "^4.12.2",
+    "react-resizable-panels": "^4.12.3",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
     "simple-git": "^3.36.0",
