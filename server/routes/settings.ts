@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from '../db.js';
+import { invalidateLicenseCache } from '../license.js';
 
 const router = express.Router();
 
@@ -8,7 +9,7 @@ const router = express.Router();
  * placeholder instead, and PUTs of the placeholder are ignored so a client
  * echoing settings back doesn't clobber the stored secret.
  */
-const SECRET_KEYS = new Set(['lmstudio_api_key']);
+const SECRET_KEYS = new Set(['lmstudio_api_key', 'bsc_license_key']);
 export const SECRET_PLACEHOLDER = '********';
 
 // Get all settings
@@ -50,6 +51,9 @@ router.put('/:key', async (req: express.Request, res: express.Response) => {
       .values({ key, value, updated_at: now })
       .onConflict((oc) => oc.column('key').doUpdateSet({ value, updated_at: now }))
       .execute();
+
+    if (key === 'bsc_license_key' || key === 'bsc_api_url') invalidateLicenseCache();
+
     
     res.json({ key, value: SECRET_KEYS.has(key) && value ? SECRET_PLACEHOLDER : value });
     return;

@@ -130,8 +130,10 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     ollama_base_url: 'http://localhost:11434',
     lmstudio_base_url: 'http://localhost:1234',
     lmstudio_api_key: '',
+    bsc_license_key: '',
     chat_workflow: DEFAULT_WORKFLOW_ID,
   });
+  const [licenseStatus, setLicenseStatus] = React.useState<{ linked: boolean; valid: boolean; tier: string; error?: string } | null>(null);
   const [workflowId, setWorkflowId] = React.useState(DEFAULT_WORKFLOW_ID);
   const workflow = getWorkflow(workflowId);
   const [availableModels, setAvailableModels] = React.useState<ProviderModels[]>([]);
@@ -199,8 +201,20 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
   }, []);
 
   React.useEffect(() => {
-    if (isSettingsOpen) loadModels();
+    if (isSettingsOpen) {
+      loadModels();
+      loadLicenseStatus();
+    }
   }, [isSettingsOpen]);
+
+  async function loadLicenseStatus() {
+    try {
+      const response = await fetch('/api/license/status');
+      setLicenseStatus(await response.json());
+    } catch {
+      setLicenseStatus(null);
+    }
+  }
 
   React.useEffect(() => {
     if (!selectedFileId) {
@@ -263,13 +277,14 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
 
   async function saveSettings() {
     try {
-      for (const key of ['model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url', 'lmstudio_api_key'] as const) {
+      for (const key of ['model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url', 'lmstudio_api_key', 'bsc_license_key'] as const) {
         await fetch(`/api/settings/${key}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ value: settings[key] })
         });
       }
+      await loadLicenseStatus();
       setIsSettingsOpen(false);
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -555,6 +570,28 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                     onChange={(e) => setSettings({ ...settings, ollama_base_url: e.target.value })}
                     className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="bsc-license-key" className="text-purple-300">BSC License Key</Label>
+                  <Input
+                    id="bsc-license-key"
+                    type="password"
+                    value={settings.bsc_license_key}
+                    onChange={(e) => setSettings({ ...settings, bsc_license_key: e.target.value })}
+                    placeholder="bsc_… from bloodsweatcode.org → Subscription"
+                    className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
+                  />
+                  <p className="text-xs text-purple-400/60 mt-1">
+                    {licenseStatus?.valid ? (
+                      <span className="text-emerald-400">Linked — {licenseStatus.tier} tier</span>
+                    ) : licenseStatus?.linked ? (
+                      <span className="text-red-400">Key rejected{licenseStatus.error ? `: ${licenseStatus.error}` : ''}</span>
+                    ) : (
+                      <>Unlocks NEO//OPS remote nodes. Get a key at{' '}
+                        <a href="https://bloodsweatcode.org/settings/subscription" target="_blank" rel="noreferrer" className="text-cyan-400 underline">bloodsweatcode.org</a>.
+                      </>
+                    )}
+                  </p>
                 </div>
                 <Button onClick={saveSettings} className="w-full bg-gradient-to-r from-purple-600 to-burgundy-600 hover:from-purple-500 hover:to-burgundy-500">Save</Button>
               </div>

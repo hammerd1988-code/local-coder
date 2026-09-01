@@ -4,6 +4,7 @@ import type { Socket } from 'net';
 import httpProxy from 'http-proxy';
 import { loadNodes, findNode, addRemoteNode, removeRemoteNode, usingEnvRegistry } from '../ops/nodes-config.js';
 import { tunnelStatus, syncTunnels, stopTunnel } from '../ops/tunnels.js';
+import { getLicenseStatus } from '../license.js';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
@@ -66,7 +67,20 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // POST /api/nodes — add a remote node and bring its tunnel up immediately.
-router.post('/', localOnly, (req: Request, res: Response) => {
+// Remote nodes are a BSC-licensed feature: Operator allows 1, Architect unlimited.
+router.post('/', localOnly, async (req: Request, res: Response) => {
+  const license = await getLicenseStatus();
+  const remoteCount = loadNodes().filter((n) => n.type === 'ssh').length;
+  const limit = license.remoteNodeLimit;
+  if (limit !== null && remoteCount >= limit) {
+    res.status(402).json({
+      error: license.linked
+        ? `Your ${license.tier} plan allows ${limit} remote node${limit === 1 ? '' : 's'}. Upgrade at bloodsweatcode.org for more.`
+        : 'Remote nodes require a Blood Sweat Code license. Link your account in Casper settings (key from bloodsweatcode.org → Subscription).',
+      upgradeUrl: 'https://bloodsweatcode.org/settings/subscription',
+    });
+    return;
+  }
   if (usingEnvRegistry()) {
     res.status(409).json({ error: 'Registry is pinned by the OPS_NODES environment variable; edit that instead.' });
     return;
