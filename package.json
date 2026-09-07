@@ -74,13 +74,13 @@
     "@types/http-proxy": "^1.17.17",
     "@types/node": "^22.13.5",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.5",
+    "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.1",
     "autoprefixer": "10.5.4",
-    "ignore": "7.0.6",
-    "postcss": "8.5.26",
+    "ignore": "7.0.8",
+    "postcss": "8.5.28",
     "tailwindcss": "3.4.17",
-    "tsx": "4.23.12",
+    "tsx": "4.23.13",
     "typescript": "5.8.2",
     "vite": "8.2.2"
   }
