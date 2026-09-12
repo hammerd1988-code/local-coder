@@ -188,13 +188,13 @@ export default function MyModelsPanel({
                     {isSelected && (
                       <div className="mt-3 pt-3 border-t border-gray-800">
                         <p className="text-xs text-gray-400 mb-2">Model ID:</p>
-                        <code className="text-xs text-cyan-400 bg-black/40 px-2 py-1 rounded block overflow-x-auto">
+                        <code className="text-xs text-cyan-400 bg-black/40 px-2 py-1 rounded-sm block overflow-x-auto">
                           {model.model_id}
                         </code>
                         {model.local_path && (
                           <>
                             <p className="text-xs text-gray-400 mb-2 mt-3">Local Path:</p>
-                            <code className="text-xs text-gray-400 bg-black/40 px-2 py-1 rounded block overflow-x-auto">
+                            <code className="text-xs text-gray-400 bg-black/40 px-2 py-1 rounded-sm block overflow-x-auto">
                               {model.local_path}
                             </code>
                           </>

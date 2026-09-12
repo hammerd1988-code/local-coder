@@ -75,7 +75,7 @@ export default function PreviewPanel() {
     : null;
 
   return (
-    <div className="h-full flex flex-col bg-black/60 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-black/60 backdrop-blur-xs">
       <div className="p-2 border-b border-burgundy-500/50 flex items-center gap-2">
         <h2 className="font-semibold text-burgundy-300 font-mono text-sm shrink-0 px-2">{'>'} Preview</h2>
         <Select value={entryPath ?? ''} onValueChange={setEntryPath}>

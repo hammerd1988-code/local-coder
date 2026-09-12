@@ -116,7 +116,7 @@ export default function GitPanel() {
   const currentBranch = branches.find(b => b.is_current === 1);
 
   return (
-    <div className="h-full flex flex-col bg-black/40 backdrop-blur-sm border-l border-cyan-500/30">
+    <div className="h-full flex flex-col bg-black/40 backdrop-blur-xs border-l border-cyan-500/30">
       <div className="p-4 border-b border-cyan-500/30">
         <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
           GIT CONTROL

@@ -186,7 +186,7 @@ export default function HuggingFaceExtension() {
 
   return (
     <div className="h-full flex flex-col bg-gray-950">
-      <div className="border-b border-cyan-500/30 bg-black/40 backdrop-blur-sm p-4">
+      <div className="border-b border-cyan-500/30 bg-black/40 backdrop-blur-xs p-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
             <span className="text-2xl">🤗</span>
@@ -276,7 +276,7 @@ export default function HuggingFaceExtension() {
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="bg-gray-900/50 border border-cyan-500/30 rounded px-3 py-2 text-white text-sm"
+                  className="bg-gray-900/50 border border-cyan-500/30 rounded-sm px-3 py-2 text-white text-sm"
                 >
                   {modelTypes.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>

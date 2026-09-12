@@ -152,7 +152,7 @@ export default function TerminalPanel() {
   }, [tabs, activeTabId]);
 
   return (
-    <div className="h-full flex flex-col bg-black/80 backdrop-blur-sm border-l border-cyan-500/30">
+    <div className="h-full flex flex-col bg-black/80 backdrop-blur-xs border-l border-cyan-500/30">
       <div className="h-10 border-b border-cyan-500/30 flex items-center bg-gradient-to-r from-purple-900/30 to-cyan-900/30">
         <DndContext
           sensors={sensors}

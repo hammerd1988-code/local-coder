@@ -154,7 +154,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
   }
 
   return (
-    <div className="h-full flex flex-col bg-black/60 border-r border-cyan-500/30 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-black/60 border-r border-cyan-500/30 backdrop-blur-xs">
       <div className="p-3 border-b border-cyan-500/30 space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-cyan-400 font-mono">{'>'} Files</h2>
@@ -246,7 +246,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
             {files.map(file => (
               <div
                 key={file.id}
-                className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-cyan-500/20 group transition-colors ${
+                className={`flex items-center justify-between p-2 rounded-sm cursor-pointer hover:bg-cyan-500/20 group transition-colors ${
                   selectedFileId === file.id ? 'bg-cyan-500/30 border-l-2 border-cyan-400' : ''
                 }`}
                 onClick={() => onSelectFile(file.id)}
