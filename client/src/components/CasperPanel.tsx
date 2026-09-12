@@ -142,7 +142,7 @@ export default function CasperPanel() {
   const linked = status?.linked;
 
   return (
-    <div className="h-full flex flex-col bg-black/60 backdrop-blur-sm font-mono">
+    <div className="h-full flex flex-col bg-black/60 backdrop-blur-xs font-mono">
       <div className="p-4 border-b border-burgundy-500/50">
         <h2 className="font-semibold text-burgundy-300">{'>'} Casper Remote</h2>
         <p className="text-[11px] text-purple-300/70 mt-1">
@@ -152,7 +152,7 @@ export default function CasperPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-        <div className="rounded border border-cyan-500/30 bg-black/50 p-3 space-y-2">
+        <div className="rounded-sm border border-cyan-500/30 bg-black/50 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-cyan-300">Status</span>
             <span className={`text-xs px-2 py-0.5 rounded border ${
@@ -199,7 +199,7 @@ export default function CasperPanel() {
         </div>
 
         {link && (
-          <div className="rounded border border-burgundy-500/50 bg-burgundy-950/40 p-3 space-y-2">
+          <div className="rounded-sm border border-burgundy-500/50 bg-burgundy-950/40 p-3 space-y-2">
             <p className="text-burgundy-200 text-xs">Enter this code in the browser:</p>
             <p className="text-2xl tracking-widest text-cyan-300 font-bold">{link.userCode}</p>
             <a

@@ -147,7 +147,7 @@ export default function EditorPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-black via-burgundy-950/80 to-black">
-      <header className="h-12 border-b border-burgundy-500/60 flex items-center px-4 bg-black/70 backdrop-blur-sm justify-between">
+      <header className="h-12 border-b border-burgundy-500/60 flex items-center px-4 bg-black/70 backdrop-blur-xs justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-burgundy-400 bg-clip-text text-transparent">
             {'<'} LOCAL.CODE {'/>'}

@@ -64,7 +64,7 @@ export default function IntegrationDetail({ integration }: IntegrationDetailProp
       {/* Installation Section */}
       <Card className="bg-gray-900/50 border-cyan-500/20 p-6 mb-8">
         <h2 className="text-lg font-bold text-cyan-400 mb-4 font-mono">Installation</h2>
-        <div className="bg-black/50 rounded p-4 border border-gray-700 flex items-center justify-between group">
+        <div className="bg-black/50 rounded-sm p-4 border border-gray-700 flex items-center justify-between group">
           <code className="text-sm text-green-400 font-mono">{installCommand}</code>
           <Button
             size="sm"

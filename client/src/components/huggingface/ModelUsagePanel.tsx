@@ -385,7 +385,7 @@ if __name__ == "__main__":
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Install dependencies: <code className="bg-black/40 px-1 py-0.5 rounded">pip install transformers torch</code>
+              Install dependencies: <code className="bg-black/40 px-1 py-0.5 rounded-sm">pip install transformers torch</code>
             </p>
           </TabsContent>
 
@@ -414,7 +414,7 @@ if __name__ == "__main__":
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Install dependencies: <code className="bg-black/40 px-1 py-0.5 rounded">npm install @xenova/transformers</code>
+              Install dependencies: <code className="bg-black/40 px-1 py-0.5 rounded-sm">npm install @xenova/transformers</code>
             </p>
           </TabsContent>
         </Tabs>
@@ -480,7 +480,7 @@ if __name__ == "__main__":
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Install MCP SDK: <code className="bg-black/40 px-1 py-0.5 rounded">pip install mcp</code>
+              Install MCP SDK: <code className="bg-black/40 px-1 py-0.5 rounded-sm">pip install mcp</code>
             </p>
           </div>
 

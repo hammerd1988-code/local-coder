@@ -1334,7 +1334,7 @@ export default function IntegrationsPage() {
     if (selectedIntegration.id === 'huggingface') {
       return (
         <div className="h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20 flex flex-col">
-          <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm">
+          <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-xs">
             <Button
               onClick={() => setSelectedIntegration(null)}
               variant="ghost"
@@ -1353,7 +1353,7 @@ export default function IntegrationsPage() {
 
     return (
       <div className="h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20 flex flex-col">
-        <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm">
+        <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-xs">
           <Button
             onClick={() => setSelectedIntegration(null)}
             variant="ghost"
@@ -1372,7 +1372,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-950 via-purple-950/20 to-cyan-950/20 flex flex-col">
-      <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-sm justify-between">
+      <header className="h-12 border-b border-cyan-500/30 flex items-center px-4 bg-black/40 backdrop-blur-xs justify-between">
         <div className="flex items-center gap-4">
           <Button
             onClick={() => navigate('/')}
@@ -1428,7 +1428,7 @@ export default function IntegrationsPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-gray-900/50 border border-cyan-500/30 rounded px-3 py-1 text-sm text-white"
+                  className="bg-gray-900/50 border border-cyan-500/30 rounded-sm px-3 py-1 text-sm text-white"
                 >
                   <option value="rating">Sort by: Rating</option>
                   <option value="downloads">Sort by: Downloads</option>

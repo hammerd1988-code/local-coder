@@ -154,7 +154,7 @@ export default function FileExplorer({ selectedFileId, onSelectFile }: FileExplo
   }
 
   return (
-    <div className="h-full flex flex-col bg-black/60 border-r border-cyan-500/30 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-black/60 border-r border-cyan-500/30 backdrop-blur-xs">
       <div className="p-3 border-b border-cyan-500/30 space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-cyan-400 font-mono">{'>'} Files</h2>

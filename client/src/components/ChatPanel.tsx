@@ -76,7 +76,7 @@ function CodeBlock({ code, language, canApply, onApply }: {
   }
 
   return (
-    <div className="my-2 rounded border border-burgundy-500/60 overflow-hidden">
+    <div className="my-2 rounded-sm border border-burgundy-500/60 overflow-hidden">
       <div className="flex items-center justify-between px-2 py-1 bg-burgundy-900/70 border-b border-burgundy-500/60">
         <span className="text-[10px] uppercase tracking-wider text-burgundy-300">{language || 'code'}</span>
         <div className="flex gap-1">
@@ -477,7 +477,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
   const providerModels = availableModels.find((p) => p.provider === settings.model_provider)?.models ?? [];
 
   return (
-    <div className="h-full flex flex-col bg-black/60 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-black/60 backdrop-blur-xs">
       <div className="p-3 border-b border-cyan-500/30 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-semibold text-purple-400 font-mono shrink-0">{'>'} {CASPER_NAME}</h2>
@@ -690,13 +690,13 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
       <div className="p-4 border-t border-cyan-500/30 space-y-2">
         <div className="flex flex-wrap gap-1">
           <span
-            className="text-[10px] font-mono px-2 py-0.5 rounded border border-burgundy-500/50 text-burgundy-300 bg-burgundy-600/15"
+            className="text-[10px] font-mono px-2 py-0.5 rounded-sm border border-burgundy-500/50 text-burgundy-300 bg-burgundy-600/15"
             title={workflow.description}
           >
             casper: {workflow.label}
           </span>
           {workflow.contextMode === 'project' && (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-purple-500/40 text-purple-300 bg-purple-500/10">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm border border-purple-500/40 text-purple-300 bg-purple-500/10">
               ctx: project tree
             </span>
           )}

@@ -78,7 +78,7 @@ export default function ApplyDiffDialog({ pending, onCancel, onConfirm }: ApplyD
           </DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-hidden">
-          <div className="flex flex-col min-h-0 border border-red-500/30 rounded overflow-hidden">
+          <div className="flex flex-col min-h-0 border border-red-500/30 rounded-sm overflow-hidden">
             <div className="text-[10px] uppercase tracking-wider px-2 py-1 bg-red-950/50 text-red-300 border-b border-red-500/30">
               Current
             </div>
@@ -86,7 +86,7 @@ export default function ApplyDiffDialog({ pending, onCancel, onConfirm }: ApplyD
               {loading || before === null ? 'Loading…' : (before || '(new file)')}
             </pre>
           </div>
-          <div className="flex flex-col min-h-0 border border-emerald-500/30 rounded overflow-hidden">
+          <div className="flex flex-col min-h-0 border border-emerald-500/30 rounded-sm overflow-hidden">
             <div className="text-[10px] uppercase tracking-wider px-2 py-1 bg-emerald-950/50 text-emerald-300 border-b border-emerald-500/30">
               Proposed
             </div>
