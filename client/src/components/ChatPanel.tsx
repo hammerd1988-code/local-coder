@@ -703,7 +703,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
           {contextPath && (
             <button
               onClick={() => setIncludeFile(!includeFile)}
-              className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border transition-colors ${
                 includeFile
                   ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10'
                   : 'border-gray-600 text-gray-500 line-through'

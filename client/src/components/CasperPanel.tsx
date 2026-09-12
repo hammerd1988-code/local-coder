@@ -155,7 +155,7 @@ export default function CasperPanel() {
         <div className="rounded-sm border border-cyan-500/30 bg-black/50 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-cyan-300">Status</span>
-            <span className={`text-xs px-2 py-0.5 rounded border ${
+            <span className={`text-xs px-2 py-0.5 rounded-sm border ${
               online
                 ? 'border-emerald-500/50 text-emerald-300 bg-emerald-500/10'
                 : linked
