@@ -26,7 +26,7 @@ description: Run and end-to-end test Local Coder's Express/Vite UI, LM Studio to
 ## NEO//OPS local-only inspection
 - Route: http://localhost:3000/ops, also reachable via Editor's SERVER OPS control.
 - Use a fresh temporary `DATA_DIRECTORY` and `HOST=127.0.0.1`. An existing database may contain remote nodes or a paired Casper access token; startup can reconnect configured tunnels or auto-start the paired daemon.
-- Example: `DATA_DIRECTORY=/tmp/local-coder-ops-data HOST=127.0.0.1 npm start`, with a supported Node in PATH.
+- Example: `DATA_DIRECTORY="$(mktemp -d)" HOST=127.0.0.1 OPS_NODES= npm start`, with a supported Node in PATH.
 - Modules: Overwatch, Filesystem, Console, Processes, Daemons, Network, Logs. Alt+1 through Alt+7 also navigate.
 - NODE-01 is the local registry entry. The Add Node form's Establish Uplink action persists SSH configuration and starts tunneling. Do not submit without permission to connect. Inspect validation with a documentation-only host such as `192.0.2.1`, then cancel.
 - Console is a real PTY with full process-user host access, starting at `/`. Prefer harmless commands such as `printf 'QA_READ_ONLY\n'; id -un; pwd; uname -s`; `exit` tests disconnect. Check new/close session controls, session preservation and xterm exceptions during tab lifecycle and viewport resizing.
