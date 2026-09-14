@@ -28,8 +28,14 @@ export function OpsLogs() {
   const catalogRequestRef = React.useRef(0);
   const tailRequestRef = React.useRef(0);
   const tailInFlightRef = React.useRef(false);
+  const catalogAbortRef = React.useRef<AbortController | null>(null);
+  const tailAbortRef = React.useRef<AbortController | null>(null);
 
   const loadCatalog = React.useCallback(async () => {
+    catalogAbortRef.current?.abort();
+    tailAbortRef.current?.abort();
+    const controller = new AbortController();
+    catalogAbortRef.current = controller;
     const requestId = ++catalogRequestRef.current;
     tailRequestRef.current += 1;
     tailInFlightRef.current = false;
@@ -42,7 +48,10 @@ export function OpsLogs() {
     setLoading(false);
     setError('');
     try {
-      const data = await opsGet<{ files: LogFile[]; sources: string[] }>('/api/system/logs');
+      const data = await opsGet<{ files: LogFile[]; sources: string[] }>('/api/system/logs', {
+        signal: controller.signal,
+        timeoutMs: 10_000,
+      });
       if (requestId !== catalogRequestRef.current) return;
       setFiles(data.files);
       setSources(data.sources);
@@ -58,6 +67,8 @@ export function OpsLogs() {
       if (requestId !== catalogRequestRef.current) return;
       setCatalogState('unavailable');
       setError(err.message);
+    } finally {
+      if (catalogAbortRef.current === controller) catalogAbortRef.current = null;
     }
   }, []);
 
@@ -66,17 +77,22 @@ export function OpsLogs() {
     return () => {
       catalogRequestRef.current += 1;
       tailRequestRef.current += 1;
+      catalogAbortRef.current?.abort();
+      tailAbortRef.current?.abort();
     };
   }, [loadCatalog]);
 
   const loadTail = React.useCallback(async (supersede = false) => {
     if (tailInFlightRef.current && !supersede) return;
+    if (supersede) tailAbortRef.current?.abort();
     const requestId = ++tailRequestRef.current;
     if (!active) {
       setContent('');
       setTailState('idle');
       return;
     }
+    const controller = new AbortController();
+    tailAbortRef.current = controller;
     tailInFlightRef.current = true;
     setLoading(true);
     setContent('');
@@ -85,7 +101,10 @@ export function OpsLogs() {
       const qs = active.kind === 'source'
         ? `source=${encodeURIComponent(active.id)}&lines=${lines}`
         : `path=${encodeURIComponent(active.id)}&lines=${lines}`;
-      const data = await opsGet<{ content: string }>(`/api/system/logs/tail?${qs}`);
+      const data = await opsGet<{ content: string }>(`/api/system/logs/tail?${qs}`, {
+        signal: controller.signal,
+        timeoutMs: 3500,
+      });
       if (requestId !== tailRequestRef.current) return;
       setContent(data.content);
       setTailState('ready');
@@ -96,6 +115,7 @@ export function OpsLogs() {
       setTailState('unavailable');
       setError(err.message);
     } finally {
+      if (tailAbortRef.current === controller) tailAbortRef.current = null;
       if (requestId === tailRequestRef.current) {
         tailInFlightRef.current = false;
         setLoading(false);
@@ -110,6 +130,8 @@ export function OpsLogs() {
     return () => {
       clearInterval(t);
       tailRequestRef.current += 1;
+      tailAbortRef.current?.abort();
+      tailAbortRef.current = null;
       tailInFlightRef.current = false;
     };
   }, [loadTail, follow]);

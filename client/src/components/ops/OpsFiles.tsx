@@ -49,8 +49,18 @@ export function OpsFiles() {
   const uploadRef = React.useRef<HTMLInputElement>(null);
   const listingRequestRef = React.useRef(0);
   const fileRequestRef = React.useRef(0);
+  const openFileRef = React.useRef<OpenFile | null>(null);
+  const cwdRef = React.useRef('/');
+  openFileRef.current = openFile;
+  cwdRef.current = cwd;
 
   const load = React.useCallback(async (dir: string) => {
+    const changingDirectory = dir !== cwdRef.current;
+    if (changingDirectory && openFileRef.current?.dirty
+      && !window.confirm(`Discard unsaved changes to ${openFileRef.current.path}?`)) {
+      setPathInput(cwdRef.current);
+      return;
+    }
     const requestId = ++listingRequestRef.current;
     fileRequestRef.current += 1;
     setBusy(true);
@@ -59,7 +69,7 @@ export function OpsFiles() {
     setPathInput(dir);
     setEntries([]);
     setSelected(null);
-    setOpenFile(null);
+    if (changingDirectory) setOpenFile(null);
     try {
       const data = await opsGet<{ path: string; home: string; items: FsEntry[] }>(`/api/sysfs/list?path=${encodeURIComponent(dir)}`);
       if (requestId !== listingRequestRef.current) return;
@@ -86,6 +96,8 @@ export function OpsFiles() {
       load(full);
       return;
     }
+    if (openFileRef.current?.dirty
+      && !window.confirm(`Discard unsaved changes to ${openFileRef.current.path}?`)) return;
     const requestId = ++fileRequestRef.current;
     setError('');
     setOpenFile(null);
@@ -100,9 +112,6 @@ export function OpsFiles() {
       setError(err.message);
     }
   };
-
-  const openFileRef = React.useRef<OpenFile | null>(null);
-  openFileRef.current = openFile;
 
   const saveFile = React.useCallback(async () => {
     const f = openFileRef.current;
@@ -175,6 +184,11 @@ export function OpsFiles() {
   const crumbs = cwd === '/' ? [''] : cwd.split('/');
   const shown = entries.filter((e) => !filter || e.name.toLowerCase().includes(filter.toLowerCase()));
   const listingReady = listingState === 'ready';
+  const closeFile = () => {
+    if (openFileRef.current?.dirty
+      && !window.confirm(`Discard unsaved changes to ${openFileRef.current.path}?`)) return;
+    setOpenFile(null);
+  };
 
   return (
     <div className="h-full flex gap-3 p-3 min-h-0">
@@ -301,7 +315,7 @@ export function OpsFiles() {
               <button className="ops-btn ops-btn-magenta !py-0.5" disabled={!openFile.dirty} onClick={saveFile}>
                 <Save size={11} className="inline mr-1" />Save
               </button>
-              <button className="ops-btn !px-2 !py-0.5" onClick={() => setOpenFile(null)}><X size={11} /></button>
+              <button className="ops-btn !px-2 !py-0.5" onClick={closeFile}><X size={11} /></button>
             </div>
           }
           bodyClassName="min-h-0"

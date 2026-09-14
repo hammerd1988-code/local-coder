@@ -97,11 +97,33 @@ export function apiUrl(path: string): string {
   return `${activeApiBase}${path}`;
 }
 
-export async function opsGet<T>(url: string): Promise<T> {
-  const res = await fetch(apiUrl(url));
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as any)?.error ?? `HTTP ${res.status}`);
-  return data as T;
+interface OpsRequestOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+export async function opsGet<T>(url: string, options: OpsRequestOptions = {}): Promise<T> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abort = () => controller.abort();
+  if (options.signal?.aborted) abort();
+  else options.signal?.addEventListener('abort', abort, { once: true });
+  const timeout = options.timeoutMs === undefined ? null : window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, options.timeoutMs);
+  try {
+    const res = await fetch(apiUrl(url), { signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.error ?? `HTTP ${res.status}`);
+    return data as T;
+  } catch (error) {
+    if (timedOut) throw new Error('Request timed out');
+    throw error;
+  } finally {
+    if (timeout !== null) window.clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', abort);
+  }
 }
 
 export async function opsPost<T>(url: string, body?: unknown): Promise<T> {

@@ -192,14 +192,17 @@ function OpsDeck() {
   React.useEffect(() => {
     let disposed = false;
     let pingInFlight = false;
+    let pingController: AbortController | null = null;
     document.title = 'NEO//OPS — Server Control Deck';
     setOverview(null);
     setOnline(false);
     const ping = async () => {
       if (pingInFlight) return;
       pingInFlight = true;
+      const controller = new AbortController();
+      pingController = controller;
       try {
-        const data = await opsGet<Overview>('/api/system/overview');
+        const data = await opsGet<Overview>('/api/system/overview', { signal: controller.signal, timeoutMs: 10_000 });
         if (disposed) return;
         setOverview(data);
         setOnline(true);
@@ -208,6 +211,7 @@ function OpsDeck() {
         setOverview(null);
         setOnline(false);
       } finally {
+        if (pingController === controller) pingController = null;
         pingInFlight = false;
       }
     };
@@ -216,6 +220,7 @@ function OpsDeck() {
     return () => {
       disposed = true;
       clearInterval(t);
+      pingController?.abort();
     };
   }, [selectedId, apiBase]);
 

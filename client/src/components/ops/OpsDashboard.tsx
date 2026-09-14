@@ -76,6 +76,8 @@ export function OpsDashboard() {
     let overviewInFlight = false;
     let diskInFlight = false;
     let diskRequest = 0;
+    let overviewController: AbortController | null = null;
+    let diskController: AbortController | null = null;
     setOverview(null);
     setOverviewState('loading');
     setDisks([]);
@@ -83,8 +85,10 @@ export function OpsDashboard() {
     const loadOverview = async () => {
       if (overviewInFlight) return;
       overviewInFlight = true;
+      const controller = new AbortController();
+      overviewController = controller;
       try {
-        const data = await opsGet<Overview>('/api/system/overview');
+        const data = await opsGet<Overview>('/api/system/overview', { signal: controller.signal, timeoutMs: 10_000 });
         if (disposed) return;
         setOverview(data);
         setOverviewState('ready');
@@ -93,6 +97,7 @@ export function OpsDashboard() {
         setOverview(null);
         setOverviewState('unavailable');
       } finally {
+        if (overviewController === controller) overviewController = null;
         overviewInFlight = false;
       }
     };
@@ -100,10 +105,15 @@ export function OpsDashboard() {
       if (diskInFlight) return;
       const requestId = ++diskRequest;
       diskInFlight = true;
+      const controller = new AbortController();
+      diskController = controller;
       setDisks([]);
       setDisksState('loading');
       try {
-        const data = await opsGet<{ disks: DiskInfo[] }>('/api/system/disks');
+        const data = await opsGet<{ disks: DiskInfo[] }>('/api/system/disks', {
+          signal: controller.signal,
+          timeoutMs: 10_000,
+        });
         if (disposed || requestId !== diskRequest) return;
         setDisks(data.disks);
         setDisksState('ready');
@@ -112,6 +122,7 @@ export function OpsDashboard() {
         setDisks([]);
         setDisksState('unavailable');
       } finally {
+        if (diskController === controller) diskController = null;
         if (requestId === diskRequest) diskInFlight = false;
       }
     };
@@ -123,6 +134,8 @@ export function OpsDashboard() {
       disposed = true;
       clearInterval(overviewTimer);
       clearInterval(diskTimer);
+      overviewController?.abort();
+      diskController?.abort();
     };
   }, [apiBase]);
 

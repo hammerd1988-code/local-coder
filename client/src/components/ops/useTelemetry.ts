@@ -39,6 +39,7 @@ export function useTelemetry(apiBase = '') {
         if (disposed || source !== connection) return;
         setConnected(false);
         setFrame(null);
+        setHistory([]);
         connection.close();
         source = null;
         if (retryTimer) clearTimeout(retryTimer);

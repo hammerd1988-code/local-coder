@@ -46,13 +46,18 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
   const [envRegistry, setEnvRegistry] = React.useState(false);
   const pollRequestRef = React.useRef(0);
   const pollInFlightRef = React.useRef(false);
+  const pollAbortRef = React.useRef<AbortController | null>(null);
 
   const poll = React.useCallback(async () => {
+    pollAbortRef.current?.abort();
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 4000);
     const requestId = ++pollRequestRef.current;
     pollInFlightRef.current = true;
     try {
       // Node registry always comes from the hub itself (base '').
-      const res = await fetch('/api/nodes');
+      const res = await fetch('/api/nodes', { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (requestId !== pollRequestRef.current) return;
@@ -62,6 +67,8 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
       if (requestId !== pollRequestRef.current) return;
       setNodes((current) => current.map((node) => ({ ...node, status: 'down' })));
     } finally {
+      window.clearTimeout(timeout);
+      if (pollAbortRef.current === controller) pollAbortRef.current = null;
       if (requestId === pollRequestRef.current) pollInFlightRef.current = false;
     }
   }, []);
@@ -77,6 +84,8 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
       disposed = true;
       clearInterval(t);
       pollRequestRef.current += 1;
+      pollAbortRef.current?.abort();
+      pollAbortRef.current = null;
       pollInFlightRef.current = false;
     };
   }, [poll]);
