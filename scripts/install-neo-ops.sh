@@ -104,11 +104,14 @@ apt-get update -y
 # iproute2 provides `ss`, which the network panel uses to list open sockets.
 apt-get install -y curl git build-essential python3 ca-certificates openssh-client iproute2
 
-# Node.js 22+ if missing or too old.
+# Node.js 22.12+ if missing or too old.
 NEED_NODE=1
 if command -v node >/dev/null 2>&1; then
-  MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-  [[ "$MAJOR" -ge 22 ]] && NEED_NODE=0
+  NODE_VERSION="$(node -p 'process.versions.node' 2>/dev/null || echo 0.0.0)"
+  IFS=. read -r NODE_MAJOR NODE_MINOR _ <<< "$NODE_VERSION"
+  if [[ "$NODE_MAJOR" -gt 22 || ( "$NODE_MAJOR" -eq 22 && "$NODE_MINOR" -ge 12 ) ]]; then
+    NEED_NODE=0
+  fi
 fi
 if [[ "$NEED_NODE" -eq 1 ]]; then
   log "Installing Node.js 22 LTS…"
@@ -116,6 +119,7 @@ if [[ "$NEED_NODE" -eq 1 ]]; then
   apt-get install -y nodejs
 fi
 log "node $(node -v) / npm $(npm -v)"
+NODE_BIN="$(readlink -f "$(command -v node)")"
 
 # Fetch / update the source.
 if [[ -d "$INSTALL_DIR/.git" ]]; then
@@ -187,7 +191,7 @@ UNIT_SRC="$INSTALL_DIR/scripts/neo-ops.service"
 UNIT_DST="/etc/systemd/system/neo-ops.service"
 [[ -f "$UNIT_SRC" ]] || die "Service template not found at $UNIT_SRC"
 log "Installing systemd unit $UNIT_DST"
-sed "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$UNIT_SRC" > "$UNIT_DST"
+sed -e "s|__INSTALL_DIR__|$INSTALL_DIR|g" -e "s|__NODE_BIN__|$NODE_BIN|g" "$UNIT_SRC" > "$UNIT_DST"
 
 systemctl daemon-reload
 systemctl enable neo-ops >/dev/null 2>&1 || true

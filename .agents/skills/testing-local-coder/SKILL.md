@@ -6,8 +6,8 @@ description: Run and end-to-end test Local Coder's Express/Vite UI, LM Studio to
 # Testing local-coder
 
 ## Startup
-- Select a Node version supported by the installed dependency engines, rather than assuming the system Node path exists. `better-sqlite3@13.0.3` requires Node >=22; Node 24.19.0 worked in this inspection. Earlier Node 20 guidance applies only to older dependency versions. A NODE_MODULE_VERSION error means native dependencies need rebuilding under the selected supported runtime.
-- Repository CI, release builds, Docker images, and installers target Node 22 or newer.
+- Select a Node version supported by the installed dependency engines, rather than assuming the system Node path exists. The effective minimum is Node 22.12 because `better-sqlite3@13.0.3` requires Node >=22 and Vite requires Node >=22.12; Node 24.19.0 worked in this inspection. A NODE_MODULE_VERSION error means native dependencies need rebuilding under the selected supported runtime.
+- Repository CI, release builds, Docker images, and installers target Node 22.12 or newer.
 - Verify SQLite loads with the selected runtime before startup: `node -e "const db=new (require('better-sqlite3'))(':memory:'); console.log(db.prepare('select 1 as ready').get())"`.
 - Run `npm start` using the selected runtime in PATH. Express API is on :3001, Vite UI on :3000; Vite proxies `/api` to :3001.
 - If Vite crashes on a missing rolldown native binding: `npm install --no-save @rolldown/binding-linux-x64-gnu@$(node -p "require('rolldown/package.json').version")`.

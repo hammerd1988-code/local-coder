@@ -17,7 +17,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  nodeVersion: '20.x'
+  nodeVersion: '22.23.x'
   dockerRegistryServiceConnection: 'dockerHub'
   imageRepository: 'local-coder'
   containerRegistry: 'your-registry.azurecr.io'

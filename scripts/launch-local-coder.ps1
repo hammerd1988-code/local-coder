@@ -43,19 +43,20 @@ Write-Log 'Starting Local Code...'
 
 $node = Get-Command node.exe -ErrorAction SilentlyContinue
 if (-not $node) {
-  Show-Msg "Node.js was not found. Install Node.js 22 or newer, then try again.`n`nhttps://nodejs.org"
+  Show-Msg "Node.js was not found. Install Node.js 22.12 or newer, then try again.`n`nhttps://nodejs.org"
   exit 1
 }
 
-$nodeMajor = [int](& node -p "process.versions.node.split('.')[0]")
-if ($nodeMajor -lt 22) {
-  Show-Msg "Local Code requires Node.js 22 or newer. The installed version is $(& node --version).`n`nhttps://nodejs.org"
+$nodeCheck = Join-Path $Root 'scripts\check-node-version.mjs'
+& $node.Source $nodeCheck
+if ($LASTEXITCODE -ne 0) {
+  Show-Msg "Local Code requires Node.js 22.12 or newer. The installed version is $(& node --version).`n`nhttps://nodejs.org"
   exit 1
 }
 
 $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
 if (-not $npm) {
-  Show-Msg "npm was not found. Reinstall Node.js 22 or newer, then try again.`n`nhttps://nodejs.org"
+  Show-Msg "npm was not found. Reinstall Node.js 22.12 or newer, then try again.`n`nhttps://nodejs.org"
   exit 1
 }
 

@@ -10,7 +10,7 @@ Type=simple
 User=root
 # __INSTALL_DIR__ is replaced by install-neo-ops.sh with the real path.
 WorkingDirectory=__INSTALL_DIR__/dist
-ExecStart=/usr/bin/node server/server/index.js
+ExecStart=__NODE_BIN__ server/server/index.js
 EnvironmentFile=__INSTALL_DIR__/neo-ops.env
 Restart=always
 RestartSec=3

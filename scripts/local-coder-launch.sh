@@ -73,6 +73,15 @@ find_server_entry() {
 if start_via_systemd; then
   log "Starting via systemd user service"
 else
+  command -v node >/dev/null 2>&1 || {
+    notify "Node.js was not found. Install Node.js 22.12 or newer."
+    log "Missing Node.js runtime - aborting"
+    exit 1
+  }
+  if ! node "$ROOT/scripts/check-node-version.mjs" >> "$LOG_FILE" 2>&1; then
+    notify "Local Code requires Node.js 22.12 or newer. See data/launcher.log"
+    exit 1
+  fi
   ENTRY="$(find_server_entry)" || {
     notify "Local Code is not built yet. Run: npm run build (in $ROOT)"
     log "Missing production build - aborting"

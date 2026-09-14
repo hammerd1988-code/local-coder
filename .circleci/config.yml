@@ -9,7 +9,7 @@ orbs:
 executors:
   node-executor:
     docker:
-      - image: cimg/node:20.11
+      - image: cimg/node:22.23
     working_directory: ~/project
 
 # Reusable commands

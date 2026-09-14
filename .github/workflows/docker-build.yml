@@ -19,6 +19,8 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.scan_ref.outputs.image_ref }}
     permissions:
       contents: read
       packages: write
@@ -51,6 +53,10 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Select image for vulnerability scan
+        id: scan_ref
+        run: echo "image_ref=${REGISTRY}/${IMAGE_NAME}:${{ steps.meta.outputs.version }}" >> "$GITHUB_OUTPUT"
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
@@ -87,7 +93,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image-ref: ${{ needs['build-and-push'].outputs.image_ref }}
           format: 'sarif'
           output: 'trivy-results.sarif'
       
