@@ -44,16 +44,22 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
   const [nodes, setNodes] = React.useState<NodeSummary[]>([LOCAL]);
   const [selectedId, setSelectedId] = React.useState('local');
   const [envRegistry, setEnvRegistry] = React.useState(false);
+  const pollRequestRef = React.useRef(0);
 
   const poll = React.useCallback(async () => {
+    const requestId = ++pollRequestRef.current;
     try {
       // Node registry always comes from the hub itself (base '').
       const res = await fetch('/api/nodes');
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (requestId !== pollRequestRef.current) return;
       if (Array.isArray(data?.nodes) && data.nodes.length > 0) setNodes(data.nodes);
       if (typeof data?.envRegistry === 'boolean') setEnvRegistry(data.envRegistry);
-    } catch { /* keep last known registry */ }
+    } catch {
+      if (requestId !== pollRequestRef.current) return;
+      setNodes((current) => current.map((node) => ({ ...node, status: 'down' })));
+    }
   }, []);
 
   React.useEffect(() => {

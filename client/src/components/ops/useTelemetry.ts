@@ -31,8 +31,12 @@ export function useTelemetry(apiBase = '') {
         } catch { /* malformed frame */ }
       };
       source.onerror = () => {
+        if (disposed) return;
         setConnected(false);
+        setFrame(null);
+        setHistory([]);
         source?.close();
+        if (retryTimer) clearTimeout(retryTimer);
         retryTimer = setTimeout(connect, 3000);
       };
     };

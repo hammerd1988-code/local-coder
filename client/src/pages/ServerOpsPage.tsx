@@ -184,23 +184,35 @@ function NodeSwitcher() {
 }
 
 function OpsDeck() {
-  const { selectedId } = useNode();
+  const { selectedId, apiBase } = useNode();
   const [module, setModule] = React.useState<ModuleId>('dashboard');
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const [online, setOnline] = React.useState(false);
 
   React.useEffect(() => {
+    let disposed = false;
     document.title = 'NEO//OPS — Server Control Deck';
     setOverview(null);
     setOnline(false);
     const ping = () =>
       opsGet<Overview>('/api/system/overview')
-        .then((o) => { setOverview(o); setOnline(true); })
-        .catch(() => setOnline(false));
+        .then((o) => {
+          if (disposed) return;
+          setOverview(o);
+          setOnline(true);
+        })
+        .catch(() => {
+          if (disposed) return;
+          setOverview(null);
+          setOnline(false);
+        });
     ping();
     const t = setInterval(ping, 15_000);
-    return () => clearInterval(t);
-  }, [selectedId]);
+    return () => {
+      disposed = true;
+      clearInterval(t);
+    };
+  }, [selectedId, apiBase]);
 
   // Keyboard shortcuts: Alt+1..7 switch modules
   React.useEffect(() => {

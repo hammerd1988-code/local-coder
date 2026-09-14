@@ -53,22 +53,66 @@ function NeonTooltip({ active, payload, formatter }: any) {
   );
 }
 
+type DataState = 'loading' | 'ready' | 'unavailable';
+
+function DataPlaceholder({ state, loading, unavailable }: { state: DataState; loading: string; unavailable: string }) {
+  return (
+    <div className="h-full flex items-center justify-center text-xs p-4" style={{ color: 'var(--ops-dim)' }}>
+      <span className={state === 'loading' ? 'ops-pulse' : ''}>{state === 'loading' ? loading : unavailable}</span>
+    </div>
+  );
+}
+
 export function OpsDashboard() {
   const { apiBase } = useNode();
   const { frame, history, connected } = useTelemetry(apiBase);
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const [disks, setDisks] = React.useState<DiskInfo[]>([]);
+  const [overviewState, setOverviewState] = React.useState<DataState>('loading');
+  const [disksState, setDisksState] = React.useState<DataState>('loading');
 
   React.useEffect(() => {
-    opsGet<Overview>('/api/system/overview').then(setOverview).catch(() => {});
-    const load = () => opsGet<{ disks: DiskInfo[] }>('/api/system/disks').then((d) => setDisks(d.disks)).catch(() => {});
+    let disposed = false;
+    let diskRequest = 0;
+    setOverview(null);
+    setOverviewState('loading');
+    setDisks([]);
+    setDisksState('loading');
+    opsGet<Overview>('/api/system/overview')
+      .then((data) => {
+        if (disposed) return;
+        setOverview(data);
+        setOverviewState('ready');
+      })
+      .catch(() => {
+        if (disposed) return;
+        setOverview(null);
+        setOverviewState('unavailable');
+      });
+    const load = () => {
+      const requestId = ++diskRequest;
+      opsGet<{ disks: DiskInfo[] }>('/api/system/disks')
+        .then((data) => {
+          if (disposed || requestId !== diskRequest) return;
+          setDisks(data.disks);
+          setDisksState('ready');
+        })
+        .catch(() => {
+          if (disposed || requestId !== diskRequest) return;
+          setDisks([]);
+          setDisksState('unavailable');
+        });
+    };
     load();
     const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
-  }, []);
+    return () => {
+      disposed = true;
+      clearInterval(t);
+    };
+  }, [apiBase]);
 
-  const memPct = frame ? (frame.mem.used / Math.max(1, frame.mem.total)) * 100 : 0;
-  const swapPct = frame && frame.mem.swapTotal > 0 ? (frame.mem.swapUsed / frame.mem.swapTotal) * 100 : 0;
+  const memPct = frame ? (frame.mem.used / Math.max(1, frame.mem.total)) * 100 : null;
+  const swapPct = frame ? (frame.mem.swapTotal > 0 ? (frame.mem.swapUsed / frame.mem.swapTotal) * 100 : 0) : null;
 
   const cpuData = history.map((h: TelemetryFrame) => ({ t: h.t, cpu: h.cpu }));
   const netData = history.map((h: TelemetryFrame) => ({ t: h.t, rx: h.net.rx, tx: h.net.tx }));
@@ -94,9 +138,7 @@ export function OpsDashboard() {
               <InfoRow key={a.iface + a.address} k={a.iface} v={a.address} accent />
             ))}
           </>
-        ) : (
-          <div className="ops-pulse text-xs p-4" style={{ color: 'var(--ops-dim)' }}>ACQUIRING HOST DATA…</div>
-        )}
+        ) : <DataPlaceholder state={overviewState} loading="ACQUIRING HOST DATA…" unavailable="HOST DATA UNAVAILABLE" />}
       </OpsPanel>
 
       {/* Gauges */}
@@ -106,9 +148,14 @@ export function OpsDashboard() {
         right={<StatusDot ok={connected} label={connected ? 'LIVE FEED' : 'LINK DOWN'} />}
         bodyClassName="flex items-center justify-around flex-wrap gap-2 p-2"
       >
-        <Gauge value={frame?.cpu ?? 0} label="CPU Load" sublabel={frame ? `${frame.cores.length} cores` : undefined} />
+        <Gauge value={frame?.cpu ?? null} label="CPU Load" sublabel={frame ? `${frame.cores.length} cores` : undefined} />
         <Gauge value={memPct} label="Memory" sublabel={frame ? `${formatBytes(frame.mem.used)} / ${formatBytes(frame.mem.total)}` : undefined} />
-        <Gauge value={swapPct} label="Swap" color={swapPct === 0 ? 'var(--ops-dim)' : undefined} sublabel={frame && frame.mem.swapTotal > 0 ? `${formatBytes(frame.mem.swapUsed)} / ${formatBytes(frame.mem.swapTotal)}` : 'no swap'} />
+        <Gauge
+          value={swapPct}
+          label="Swap"
+          color={swapPct === 0 ? 'var(--ops-dim)' : undefined}
+          sublabel={frame ? (frame.mem.swapTotal > 0 ? `${formatBytes(frame.mem.swapUsed)} / ${formatBytes(frame.mem.swapTotal)}` : 'no swap') : undefined}
+        />
         <div className="flex flex-col gap-2 min-w-[130px]">
           <div>
             <div className="text-[9px] uppercase tracking-[0.22em]" style={{ color: 'var(--ops-dim)' }}>Uptime</div>
@@ -127,7 +174,7 @@ export function OpsDashboard() {
 
       {/* CPU history */}
       <OpsPanel title="CPU // Timeline" className="col-span-12 lg:col-span-6 h-48">
-        <ResponsiveContainer width="100%" height="100%">
+        {frame ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={cpuData} margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
             <defs>
               <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
@@ -139,7 +186,7 @@ export function OpsDashboard() {
             <Tooltip content={<NeonTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />} />
             <Area type="monotone" dataKey="cpu" name="CPU" stroke="#00f0ff" strokeWidth={1.5} fill="url(#cpuGrad)" isAnimationActive={false} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <DataPlaceholder state={connected ? 'loading' : 'unavailable'} loading="WAITING FOR TELEMETRY…" unavailable="TELEMETRY UNAVAILABLE" />}
       </OpsPanel>
 
       {/* Network */}
@@ -154,7 +201,7 @@ export function OpsDashboard() {
           </span>
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {frame ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={netData} margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
             <defs>
               <linearGradient id="rxGrad" x1="0" y1="0" x2="0" y2="1">
@@ -171,12 +218,14 @@ export function OpsDashboard() {
             <Area type="monotone" dataKey="rx" name="RX" stroke="#00f0ff" strokeWidth={1.5} fill="url(#rxGrad)" isAnimationActive={false} />
             <Area type="monotone" dataKey="tx" name="TX" stroke="#ff2bd6" strokeWidth={1.5} fill="url(#txGrad)" isAnimationActive={false} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <DataPlaceholder state={connected ? 'loading' : 'unavailable'} loading="WAITING FOR TELEMETRY…" unavailable="TELEMETRY UNAVAILABLE" />}
       </OpsPanel>
 
       {/* Per-core */}
       <OpsPanel title={`Cores // ${frame?.cores.length ?? 0} Units`} className="col-span-12 lg:col-span-6">
-        {frame ? <CoreBars cores={frame.cores} /> : <div className="ops-pulse text-xs p-4" style={{ color: 'var(--ops-dim)' }}>WAITING FOR FEED…</div>}
+        {frame
+          ? <CoreBars cores={frame.cores} />
+          : <DataPlaceholder state={connected ? 'loading' : 'unavailable'} loading="WAITING FOR FEED…" unavailable="TELEMETRY UNAVAILABLE" />}
       </OpsPanel>
 
       {/* Disk IO */}
@@ -190,7 +239,7 @@ export function OpsDashboard() {
           </span>
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {frame ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={ioData} margin={{ top: 8, right: 8, bottom: 4, left: 8 }}>
             <defs>
               <linearGradient id="readGrad" x1="0" y1="0" x2="0" y2="1">
@@ -207,7 +256,7 @@ export function OpsDashboard() {
             <Area type="monotone" dataKey="read" name="READ" stroke="#39ff88" strokeWidth={1.5} fill="url(#readGrad)" isAnimationActive={false} />
             <Area type="monotone" dataKey="write" name="WRITE" stroke="#fcee0a" strokeWidth={1.5} fill="url(#writeGrad)" isAnimationActive={false} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <DataPlaceholder state={connected ? 'loading' : 'unavailable'} loading="WAITING FOR TELEMETRY…" unavailable="TELEMETRY UNAVAILABLE" />}
       </OpsPanel>
 
       {/* Storage */}
@@ -234,7 +283,15 @@ export function OpsDashboard() {
             </div>
           );
         })}
-        {disks.length === 0 && <div className="text-xs p-2" style={{ color: 'var(--ops-dim)' }}>NO VOLUMES DETECTED</div>}
+        {disks.length === 0 && (
+          <div className="text-xs p-2" style={{ color: 'var(--ops-dim)' }}>
+            {disksState === 'loading'
+              ? 'ACQUIRING STORAGE DATA…'
+              : disksState === 'unavailable'
+                ? 'STORAGE DATA UNAVAILABLE'
+                : 'NO VOLUMES DETECTED'}
+          </div>
+        )}
       </OpsPanel>
     </div>
   );

@@ -33,6 +33,8 @@ interface OpenFile {
   size: number;
 }
 
+type ListingState = 'loading' | 'ready' | 'unavailable';
+
 export function OpsFiles() {
   const [cwd, setCwd] = React.useState('/');
   const [pathInput, setPathInput] = React.useState('/');
@@ -43,22 +45,35 @@ export function OpsFiles() {
   const [selected, setSelected] = React.useState<string | null>(null);
   const [openFile, setOpenFile] = React.useState<OpenFile | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [listingState, setListingState] = React.useState<ListingState>('loading');
   const uploadRef = React.useRef<HTMLInputElement>(null);
+  const listingRequestRef = React.useRef(0);
+  const fileRequestRef = React.useRef(0);
 
   const load = React.useCallback(async (dir: string) => {
+    const requestId = ++listingRequestRef.current;
+    fileRequestRef.current += 1;
     setBusy(true);
     setError('');
+    setListingState('loading');
+    setPathInput(dir);
+    setEntries([]);
+    setSelected(null);
     try {
       const data = await opsGet<{ path: string; home: string; items: FsEntry[] }>(`/api/sysfs/list?path=${encodeURIComponent(dir)}`);
+      if (requestId !== listingRequestRef.current) return;
       setEntries(data.items);
       setCwd(data.path);
       setPathInput(data.path);
       setHome(data.home);
       setSelected(null);
+      setListingState('ready');
     } catch (err: any) {
+      if (requestId !== listingRequestRef.current) return;
       setError(err.message);
+      setListingState('unavailable');
     } finally {
-      setBusy(false);
+      if (requestId === listingRequestRef.current) setBusy(false);
     }
   }, []);
 
@@ -70,12 +85,17 @@ export function OpsFiles() {
       load(full);
       return;
     }
+    const requestId = ++fileRequestRef.current;
+    setError('');
+    setOpenFile(null);
     try {
       const data = await opsGet<{ path: string; size: number; content?: string; binary?: boolean; tooLarge?: boolean }>(
         `/api/sysfs/read?path=${encodeURIComponent(full)}`,
       );
+      if (requestId !== fileRequestRef.current) return;
       setOpenFile({ path: data.path, content: data.content ?? '', dirty: false, binary: data.binary, tooLarge: data.tooLarge, size: data.size });
     } catch (err: any) {
+      if (requestId !== fileRequestRef.current) return;
       setError(err.message);
     }
   };
@@ -153,6 +173,7 @@ export function OpsFiles() {
 
   const crumbs = cwd === '/' ? [''] : cwd.split('/');
   const shown = entries.filter((e) => !filter || e.name.toLowerCase().includes(filter.toLowerCase()));
+  const listingReady = listingState === 'ready';
 
   return (
     <div className="h-full flex gap-3 p-3 min-h-0">
@@ -197,9 +218,9 @@ export function OpsFiles() {
 
         {/* toolbar */}
         <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-cyan-400/10 shrink-0 flex-wrap">
-          <button className="ops-btn" onClick={touch}><FilePlus size={11} className="inline mr-1" />File</button>
-          <button className="ops-btn" onClick={mkdir}><FolderPlus size={11} className="inline mr-1" />Dir</button>
-          <button className="ops-btn" onClick={() => uploadRef.current?.click()}><Upload size={11} className="inline mr-1" />Up</button>
+          <button className="ops-btn" disabled={!listingReady} onClick={touch}><FilePlus size={11} className="inline mr-1" />File</button>
+          <button className="ops-btn" disabled={!listingReady} onClick={mkdir}><FolderPlus size={11} className="inline mr-1" />Dir</button>
+          <button className="ops-btn" disabled={!listingReady} onClick={() => uploadRef.current?.click()}><Upload size={11} className="inline mr-1" />Up</button>
           <button className="ops-btn" disabled={!selected} onClick={download}><Download size={11} className="inline mr-1" />Down</button>
           <button className="ops-btn" disabled={!selected} onClick={rename}><PenLine size={11} className="inline mr-1" />Move</button>
           <button className="ops-btn" disabled={!selected} onClick={chmod}><Shield size={11} className="inline mr-1" />Mode</button>
@@ -247,13 +268,23 @@ export function OpsFiles() {
                 </tr>
               ))}
               {shown.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-6" style={{ color: 'var(--ops-dim)' }}>EMPTY SECTOR</td></tr>
+                <tr>
+                  <td colSpan={5} className="text-center py-6" style={{ color: 'var(--ops-dim)' }}>
+                    {listingState === 'loading'
+                      ? 'ACQUIRING DIRECTORY…'
+                      : listingState === 'unavailable'
+                        ? 'DIRECTORY UNAVAILABLE'
+                        : filter
+                          ? 'NO MATCHING OBJECTS'
+                          : 'EMPTY SECTOR'}
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="px-3 py-1 text-[10px] border-t border-cyan-400/10 shrink-0" style={{ color: 'var(--ops-dim)' }}>
-          {shown.length} objects // {cwd}
+          {listingReady ? `${shown.length} objects` : listingState.toUpperCase()} // {cwd}
         </div>
       </OpsPanel>
 

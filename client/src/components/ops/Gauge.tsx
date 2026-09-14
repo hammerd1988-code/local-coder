@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 interface GaugeProps {
-  value: number; // 0..100
+  value: number | null; // 0..100, null when telemetry is unavailable
   label: string;
   sublabel?: string;
   size?: number;
@@ -10,9 +10,10 @@ interface GaugeProps {
 
 /** SVG radial gauge with neon glow, 270° sweep. */
 export function Gauge({ value, label, sublabel, size = 150, color }: GaugeProps) {
-  const clamped = Math.min(100, Math.max(0, value));
+  const available = typeof value === 'number' && Number.isFinite(value);
+  const clamped = available ? Math.min(100, Math.max(0, value)) : 0;
   const auto = clamped > 90 ? 'var(--ops-red)' : clamped > 70 ? 'var(--ops-yellow)' : 'var(--ops-cyan)';
-  const stroke = color ?? auto;
+  const stroke = available ? (color ?? auto) : 'var(--ops-dim)';
   const r = size / 2 - 12;
   const cx = size / 2;
   const cy = size / 2;
@@ -31,7 +32,7 @@ export function Gauge({ value, label, sublabel, size = 150, color }: GaugeProps)
       y1: cy + inner * Math.sin(angle),
       x2: cx + outer * Math.cos(angle),
       y2: cy + outer * Math.sin(angle),
-      lit: (i / 27) * 100 <= clamped,
+      lit: available && (i / 27) * 100 <= clamped,
     };
   });
 
@@ -64,8 +65,8 @@ export function Gauge({ value, label, sublabel, size = 150, color }: GaugeProps)
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="ops-display text-2xl font-bold" style={{ color: stroke, textShadow: `0 0 12px ${stroke}` }}>
-            {clamped.toFixed(0)}
-            <span className="text-xs opacity-70">%</span>
+            {available ? clamped.toFixed(0) : '—'}
+            {available && <span className="text-xs opacity-70">%</span>}
           </span>
           {sublabel && <span className="text-[9px] mt-0.5" style={{ color: 'var(--ops-dim)' }}>{sublabel}</span>}
         </div>
