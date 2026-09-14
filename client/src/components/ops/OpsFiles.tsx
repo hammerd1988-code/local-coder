@@ -124,10 +124,11 @@ export function OpsFiles() {
     }
   }, []);
 
-  const act = async (fn: () => Promise<unknown>) => {
+  const act = async (fn: () => Promise<unknown>, onSuccess?: () => void) => {
     setError('');
     try {
       await fn();
+      onSuccess?.();
       await load(cwd);
     } catch (err: any) {
       setError(err.message);
@@ -146,14 +147,24 @@ export function OpsFiles() {
 
   const rename = () => {
     if (!selected) return;
-    const to = window.prompt('Rename / move to:', joinPath(cwd, selected));
-    if (to) act(() => opsPost('/api/sysfs/rename', { from: joinPath(cwd, selected), to }));
+    const from = joinPath(cwd, selected);
+    const to = window.prompt('Rename / move to:', from);
+    if (to) {
+      act(
+        () => opsPost('/api/sysfs/rename', { from, to }),
+        () => setOpenFile((current) => (current?.path === from ? { ...current, path: to } : current)),
+      );
+    }
   };
 
   const del = () => {
     if (!selected) return;
-    if (!window.confirm(`PERMANENTLY delete ${joinPath(cwd, selected)}?`)) return;
-    act(() => opsPost('/api/sysfs/delete', { path: joinPath(cwd, selected) }));
+    const path = joinPath(cwd, selected);
+    if (!window.confirm(`PERMANENTLY delete ${path}?`)) return;
+    act(
+      () => opsPost('/api/sysfs/delete', { path }),
+      () => setOpenFile((current) => (current?.path === path ? null : current)),
+    );
   };
 
   const chmod = () => {
