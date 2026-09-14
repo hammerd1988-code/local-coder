@@ -22,6 +22,7 @@ steps:
   - name: test
     image: node:22-alpine
     commands:
+      - apk add --no-cache bash
       - echo "Running tests..."
       - npm test
     depends_on:

@@ -39,6 +39,7 @@ test:
   stage: test
   image: node:22-alpine
   before_script:
+    - apk add --no-cache bash
     - npm ci --cache .npm --prefer-offline
   script:
     - echo "Running tests..."
