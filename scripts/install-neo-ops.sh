@@ -104,11 +104,11 @@ apt-get update -y
 # iproute2 provides `ss`, which the network panel uses to list open sockets.
 apt-get install -y curl git build-essential python3 ca-certificates openssh-client iproute2
 
-# Node.js 20+ (NodeSource 22 LTS) if missing or too old.
+# Node.js 22+ if missing or too old.
 NEED_NODE=1
 if command -v node >/dev/null 2>&1; then
   MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-  [[ "$MAJOR" -ge 20 ]] && NEED_NODE=0
+  [[ "$MAJOR" -ge 22 ]] && NEED_NODE=0
 fi
 if [[ "$NEED_NODE" -eq 1 ]]; then
   log "Installing Node.js 22 LTS…"
