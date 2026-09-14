@@ -23,7 +23,7 @@ steps:
     image: node:22-alpine
     commands:
       - echo "Running tests..."
-      # - npm test
+      - npm test
     depends_on:
       - install
 

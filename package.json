@@ -15,7 +15,7 @@
     "app:linux:install": "bash scripts/install-linux-desktop.sh",
     "check:node": "node scripts/check-node-version.mjs",
     "lint": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
-    "test": "node --test scripts/check-node-version.test.mjs",
+    "test": "node --test scripts/check-node-version.test.mjs scripts/local-coder-launch.test.mjs",
     "test:coverage": "echo \"No coverage configured yet\" && exit 0",
     "docker:build": "docker build -t local-coder .",
     "docker:build:dev": "docker build -t local-coder:dev -f Dockerfile.dev .",

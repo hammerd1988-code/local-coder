@@ -69,8 +69,7 @@ stages:
             displayName: 'Install dependencies'
 
           - script: |
-              echo "Running tests..."
-              # npm test
+              npm test
             displayName: 'Run tests'
 
           - task: PublishTestResults@2

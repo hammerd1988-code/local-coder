@@ -138,8 +138,13 @@ if [[ "$DO_BUILD" -eq 1 ]]; then
   log "Installing dependencies and building (this compiles node-pty & better-sqlite3)…"
   ( cd "$INSTALL_DIR" && npm ci --legacy-peer-deps && npm run build )
 else
-  warn "Skipping build (--no-build)."
+  [[ -d "$INSTALL_DIR/node_modules" ]] || die "--no-build requires an existing dependency installation."
+  warn "Skipping application build (--no-build); rebuilding native dependencies for $(node -v)."
+  ( cd "$INSTALL_DIR" && npm rebuild better-sqlite3 node-pty )
 fi
+
+log "Verifying native modules for $(node -v)…"
+( cd "$INSTALL_DIR" && "$NODE_BIN" -e "require('better-sqlite3'); require('node-pty')" )
 
 mkdir -p "$DATA_DIR"
 

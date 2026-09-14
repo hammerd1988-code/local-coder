@@ -91,10 +91,7 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: |
-          echo "Running tests..."
-          # Add test command when tests are configured
-          # npm test
+        run: npm test
       
       - name: Generate test coverage
         run: |

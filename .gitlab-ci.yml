@@ -42,8 +42,7 @@ test:
     - npm ci --cache .npm --prefer-offline
   script:
     - echo "Running tests..."
-    # Add test commands when configured
-    # - npm test
+    - npm test
     # - npm run test:coverage
   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
   artifacts:

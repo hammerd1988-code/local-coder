@@ -52,9 +52,7 @@ jobs:
       - install-dependencies
       - run:
           name: Run tests
-          command: |
-            echo "Running tests..."
-            # npm test
+          command: npm test
       - run:
           name: Generate coverage
           command: |
