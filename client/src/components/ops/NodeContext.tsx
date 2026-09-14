@@ -45,9 +45,11 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
   const [selectedId, setSelectedId] = React.useState('local');
   const [envRegistry, setEnvRegistry] = React.useState(false);
   const pollRequestRef = React.useRef(0);
+  const pollInFlightRef = React.useRef(false);
 
   const poll = React.useCallback(async () => {
     const requestId = ++pollRequestRef.current;
+    pollInFlightRef.current = true;
     try {
       // Node registry always comes from the hub itself (base '').
       const res = await fetch('/api/nodes');
@@ -59,15 +61,24 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       if (requestId !== pollRequestRef.current) return;
       setNodes((current) => current.map((node) => ({ ...node, status: 'down' })));
+    } finally {
+      if (requestId === pollRequestRef.current) pollInFlightRef.current = false;
     }
   }, []);
 
   React.useEffect(() => {
     let disposed = false;
-    const tick = () => { if (!disposed) poll(); };
+    const tick = () => {
+      if (!disposed && !pollInFlightRef.current) poll();
+    };
     tick();
     const t = setInterval(tick, 5000);
-    return () => { disposed = true; clearInterval(t); };
+    return () => {
+      disposed = true;
+      clearInterval(t);
+      pollRequestRef.current += 1;
+      pollInFlightRef.current = false;
+    };
   }, [poll]);
 
   const addNode = React.useCallback(async (input: AddNodeInput) => {

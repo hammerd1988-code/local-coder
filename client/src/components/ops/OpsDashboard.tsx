@@ -73,41 +73,56 @@ export function OpsDashboard() {
 
   React.useEffect(() => {
     let disposed = false;
+    let overviewInFlight = false;
+    let diskInFlight = false;
     let diskRequest = 0;
     setOverview(null);
     setOverviewState('loading');
     setDisks([]);
     setDisksState('loading');
-    opsGet<Overview>('/api/system/overview')
-      .then((data) => {
+    const loadOverview = async () => {
+      if (overviewInFlight) return;
+      overviewInFlight = true;
+      try {
+        const data = await opsGet<Overview>('/api/system/overview');
         if (disposed) return;
         setOverview(data);
         setOverviewState('ready');
-      })
-      .catch(() => {
+      } catch {
         if (disposed) return;
         setOverview(null);
         setOverviewState('unavailable');
-      });
-    const load = () => {
-      const requestId = ++diskRequest;
-      opsGet<{ disks: DiskInfo[] }>('/api/system/disks')
-        .then((data) => {
-          if (disposed || requestId !== diskRequest) return;
-          setDisks(data.disks);
-          setDisksState('ready');
-        })
-        .catch(() => {
-          if (disposed || requestId !== diskRequest) return;
-          setDisks([]);
-          setDisksState('unavailable');
-        });
+      } finally {
+        overviewInFlight = false;
+      }
     };
+    const load = async () => {
+      if (diskInFlight) return;
+      const requestId = ++diskRequest;
+      diskInFlight = true;
+      setDisks([]);
+      setDisksState('loading');
+      try {
+        const data = await opsGet<{ disks: DiskInfo[] }>('/api/system/disks');
+        if (disposed || requestId !== diskRequest) return;
+        setDisks(data.disks);
+        setDisksState('ready');
+      } catch {
+        if (disposed || requestId !== diskRequest) return;
+        setDisks([]);
+        setDisksState('unavailable');
+      } finally {
+        if (requestId === diskRequest) diskInFlight = false;
+      }
+    };
+    loadOverview();
     load();
-    const t = setInterval(load, 30_000);
+    const overviewTimer = setInterval(loadOverview, 15_000);
+    const diskTimer = setInterval(load, 30_000);
     return () => {
       disposed = true;
-      clearInterval(t);
+      clearInterval(overviewTimer);
+      clearInterval(diskTimer);
     };
   }, [apiBase]);
 

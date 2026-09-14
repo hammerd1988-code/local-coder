@@ -59,6 +59,7 @@ export function OpsFiles() {
     setPathInput(dir);
     setEntries([]);
     setSelected(null);
+    setOpenFile(null);
     try {
       const data = await opsGet<{ path: string; home: string; items: FsEntry[] }>(`/api/sysfs/list?path=${encodeURIComponent(dir)}`);
       if (requestId !== listingRequestRef.current) return;

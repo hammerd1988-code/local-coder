@@ -191,21 +191,26 @@ function OpsDeck() {
 
   React.useEffect(() => {
     let disposed = false;
+    let pingInFlight = false;
     document.title = 'NEO//OPS — Server Control Deck';
     setOverview(null);
     setOnline(false);
-    const ping = () =>
-      opsGet<Overview>('/api/system/overview')
-        .then((o) => {
-          if (disposed) return;
-          setOverview(o);
-          setOnline(true);
-        })
-        .catch(() => {
-          if (disposed) return;
-          setOverview(null);
-          setOnline(false);
-        });
+    const ping = async () => {
+      if (pingInFlight) return;
+      pingInFlight = true;
+      try {
+        const data = await opsGet<Overview>('/api/system/overview');
+        if (disposed) return;
+        setOverview(data);
+        setOnline(true);
+      } catch {
+        if (disposed) return;
+        setOverview(null);
+        setOnline(false);
+      } finally {
+        pingInFlight = false;
+      }
+    };
     ping();
     const t = setInterval(ping, 15_000);
     return () => {

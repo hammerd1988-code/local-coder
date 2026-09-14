@@ -18,9 +18,14 @@ export function useTelemetry(apiBase = '') {
 
     const connect = () => {
       if (disposed) return;
-      source = new EventSource(`${apiBase}/api/system/stream`);
-      source.onopen = () => setConnected(true);
-      source.onmessage = (ev) => {
+      const connection = new EventSource(`${apiBase}/api/system/stream`);
+      source = connection;
+      connection.onopen = () => {
+        if (disposed || source !== connection) return;
+        setConnected(true);
+      };
+      connection.onmessage = (ev) => {
+        if (disposed || source !== connection) return;
         try {
           const data = JSON.parse(ev.data) as TelemetryFrame;
           setFrame(data);
@@ -30,12 +35,12 @@ export function useTelemetry(apiBase = '') {
           });
         } catch { /* malformed frame */ }
       };
-      source.onerror = () => {
-        if (disposed) return;
+      connection.onerror = () => {
+        if (disposed || source !== connection) return;
         setConnected(false);
         setFrame(null);
-        setHistory([]);
-        source?.close();
+        connection.close();
+        source = null;
         if (retryTimer) clearTimeout(retryTimer);
         retryTimer = setTimeout(connect, 3000);
       };
@@ -45,6 +50,7 @@ export function useTelemetry(apiBase = '') {
     return () => {
       disposed = true;
       source?.close();
+      source = null;
       if (retryTimer) clearTimeout(retryTimer);
     };
   }, [apiBase]);

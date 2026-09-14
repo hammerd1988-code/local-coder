@@ -27,10 +27,12 @@ export function OpsLogs() {
   const viewRef = React.useRef<HTMLPreElement>(null);
   const catalogRequestRef = React.useRef(0);
   const tailRequestRef = React.useRef(0);
+  const tailInFlightRef = React.useRef(false);
 
   const loadCatalog = React.useCallback(async () => {
     const requestId = ++catalogRequestRef.current;
     tailRequestRef.current += 1;
+    tailInFlightRef.current = false;
     setFiles([]);
     setSources([]);
     setActive(null);
@@ -67,13 +69,15 @@ export function OpsLogs() {
     };
   }, [loadCatalog]);
 
-  const loadTail = React.useCallback(async () => {
+  const loadTail = React.useCallback(async (supersede = false) => {
+    if (tailInFlightRef.current && !supersede) return;
     const requestId = ++tailRequestRef.current;
     if (!active) {
       setContent('');
       setTailState('idle');
       return;
     }
+    tailInFlightRef.current = true;
     setLoading(true);
     setContent('');
     setTailState('loading');
@@ -92,17 +96,21 @@ export function OpsLogs() {
       setTailState('unavailable');
       setError(err.message);
     } finally {
-      if (requestId === tailRequestRef.current) setLoading(false);
+      if (requestId === tailRequestRef.current) {
+        tailInFlightRef.current = false;
+        setLoading(false);
+      }
     }
   }, [active, lines]);
 
   React.useEffect(() => {
-    loadTail();
+    loadTail(true);
     if (!follow) return;
     const t = setInterval(loadTail, 4000);
     return () => {
       clearInterval(t);
       tailRequestRef.current += 1;
+      tailInFlightRef.current = false;
     };
   }, [loadTail, follow]);
 
@@ -115,8 +123,11 @@ export function OpsLogs() {
   const selectActive = (next: { kind: 'file' | 'source'; id: string }) => {
     setContent('');
     setTailState('loading');
+    setError('');
     setActive(next);
   };
+
+  const refreshTail = () => loadTail(true);
 
   const colorize = (line: string): string => {
     if (/error|fail|fatal|panic|crit/i.test(line)) return 'var(--ops-red)';
@@ -187,7 +198,7 @@ export function OpsLogs() {
               {[100, 300, 500, 1000, 2000].map((n) => <option key={n} value={n}>{n} lines</option>)}
             </select>
             <button className="ops-btn !px-2" onClick={() => setFollow(!follow)}>{follow ? 'Pause' : 'Follow'}</button>
-            <button className="ops-btn !px-2" onClick={loadTail}><RefreshCw size={11} className={loading ? 'animate-spin' : ''} /></button>
+            <button className="ops-btn !px-2" onClick={refreshTail}><RefreshCw size={11} className={loading ? 'animate-spin' : ''} /></button>
           </div>
         }
         bodyClassName="flex flex-col min-h-0"
