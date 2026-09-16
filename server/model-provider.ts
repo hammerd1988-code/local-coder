@@ -56,13 +56,18 @@ export function normalizeBaseUrl(url: string): string {
   return url.trim().replace(/\/+$/, '').replace(/\/v1$/, '');
 }
 
-export async function readSettings(): Promise<(key: string) => string | undefined> {
-  const rows = await db.selectFrom('settings').select(['key', 'value']).execute();
+export type SettingsReader = Pick<typeof db, 'selectFrom'>;
+
+export async function readSettings(conn: SettingsReader = db): Promise<(key: string) => string | undefined> {
+  const rows = await conn.selectFrom('settings').select(['key', 'value']).execute();
   return (key: string) => rows.find((r) => r.key === key)?.value;
 }
 
-export async function getModelSettings(): Promise<ModelSettings> {
-  const get = await readSettings();
+export async function getModelSettings(conn: SettingsReader = db): Promise<ModelSettings> {
+  return modelSettingsFrom(await readSettings(conn));
+}
+
+export function modelSettingsFrom(get: (key: string) => string | undefined): ModelSettings {
   return {
     provider: normalizeProvider(get('model_provider')),
     model: (get('model_name') || '').trim(),
@@ -152,8 +157,9 @@ export async function resolveCompletionTarget(
 
 /** Model ids OpenRouter serves, for the settings picker. */
 export async function listOpenRouterModels(apiKey: string): Promise<string[]> {
+  const key = apiKey.trim();
   const r = await fetch(`${OPENROUTER_BASE_URL}/v1/models`, {
-    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+    headers: key ? { Authorization: `Bearer ${key}` } : {},
     signal: AbortSignal.timeout(6000),
   });
   if (!r.ok) throw new Error(`OpenRouter models: ${r.status}`);

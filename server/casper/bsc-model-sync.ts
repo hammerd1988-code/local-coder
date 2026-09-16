@@ -3,7 +3,9 @@ import { getAccessToken, getRelayHttpBase, getRelayUrl } from './config.js';
 import {
   getModelSettings,
   isOpenRouterUrl,
+  modelSettingsFrom,
   normalizeBaseUrl,
+  readSettings,
   type ModelProvider,
   type ModelSettings,
 } from '../model-provider.js';
@@ -25,6 +27,8 @@ export interface BscModelPlan {
   baseUrl?: string;
   /** Settings key holding the credential this provider needs (none for local). */
   keyField: 'openrouter_api_key' | 'openai_api_key' | 'lmstudio_api_key' | null;
+  /** Whether BSC-V3 authenticates against this endpoint (local servers may not). */
+  requiresKey: boolean;
 }
 
 export interface BscSyncSnapshot {
@@ -36,7 +40,11 @@ export interface BscSyncSnapshot {
 
 const SNAPSHOT_KEY = 'bsc_model_sync';
 const REFRESH_INTERVAL_MS = 5 * 60_000;
-let lastRefreshAt = 0;
+const FAILED_REFRESH_BACKOFF_MS = 30_000;
+let nextRefreshAt = 0;
+let inflightRefresh: Promise<RefreshResult> | null = null;
+
+export type RefreshResult = 'refreshed' | 'unchanged' | 'not-following' | 'skipped' | 'failed';
 
 export class BscSyncError extends Error {
   constructor(message: string, readonly status: number) {
@@ -49,12 +57,18 @@ async function readSetting(key: string): Promise<string | null> {
   return row?.value ?? null;
 }
 
-async function writeSetting(key: string, value: string): Promise<void> {
+type SettingsWriter = Pick<typeof db, 'insertInto' | 'deleteFrom' | 'selectFrom'>;
+
+async function writeSetting(key: string, value: string, conn: SettingsWriter = db): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
-  await db.insertInto('settings')
+  await conn.insertInto('settings')
     .values({ key, value, updated_at: now })
     .onConflict((oc) => oc.column('key').doUpdateSet({ value, updated_at: now }))
     .execute();
+}
+
+async function deleteSetting(key: string, conn: SettingsWriter = db): Promise<void> {
+  await conn.deleteFrom('settings').where('key', '=', key).execute();
 }
 
 export async function fetchBscAiSettings(): Promise<BscAiSettings> {
@@ -86,13 +100,30 @@ export async function fetchBscAiSettings(): Promise<BscAiSettings> {
   };
 }
 
-function isPrivateHost(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (h === 'localhost' || h === '::1' || h.endsWith('.local') || h.endsWith('.localhost')) return true;
+/**
+ * Literal loopback / RFC1918 / link-local / CGNAT / ULA addresses and the
+ * usual local hostnames. Hostnames that merely resolve to a private address
+ * are treated as cloud endpoints (https + key required), which is the safer
+ * default for something another machine told us to talk to.
+ */
+export function isPrivateHost(hostname: string): boolean {
+  let h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.lan') || h.endsWith('.home.arpa')) return true;
+  if (h === '::1' || h === '::') return true;
+  if (h.startsWith('::ffff:')) h = h.slice(7);
+  if (h.includes(':')) {
+    return /^f[cd][0-9a-f]{2}:/.test(h) || /^fe[89ab][0-9a-f]:/.test(h);
+  }
   const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!m) return false;
   const [a, b] = [Number(m[1]), Number(m[2])];
-  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+  return a === 0
+    || a === 127
+    || a === 10
+    || (a === 192 && b === 168)
+    || (a === 172 && b >= 16 && b <= 31)
+    || (a === 169 && b === 254)
+    || (a === 100 && b >= 64 && b <= 127);
 }
 
 export function planBscModel(settings: BscAiSettings): BscModelPlan {
@@ -109,13 +140,13 @@ export function planBscModel(settings: BscAiSettings): BscModelPlan {
   }
   const baseUrl = normalizeBaseUrl(settings.endpoint);
   if (isPrivateHost(url.hostname)) {
-    return { provider: 'lmstudio', model, baseUrl, keyField: 'lmstudio_api_key' };
+    return { provider: 'lmstudio', model, baseUrl, keyField: 'lmstudio_api_key', requiresKey: settings.hasApiKey };
   }
   if (url.protocol !== 'https:') {
     throw new BscSyncError(`Refusing plaintext http endpoint ${url.host} for a cloud provider.`, 502);
   }
-  if (isOpenRouterUrl(baseUrl)) return { provider: 'openrouter', model, keyField: 'openrouter_api_key' };
-  return { provider: 'openai', model, baseUrl, keyField: 'openai_api_key' };
+  if (isOpenRouterUrl(baseUrl)) return { provider: 'openrouter', model, keyField: 'openrouter_api_key', requiresKey: true };
+  return { provider: 'openai', model, baseUrl, keyField: 'openai_api_key', requiresKey: true };
 }
 
 export async function getSnapshot(): Promise<BscSyncSnapshot | null> {
@@ -136,7 +167,7 @@ export async function getSnapshot(): Promise<BscSyncSnapshot | null> {
 }
 
 export async function clearSnapshot(): Promise<void> {
-  await db.deleteFrom('settings').where('key', '=', SNAPSHOT_KEY).execute();
+  await deleteSetting(SNAPSHOT_KEY);
 }
 
 function planBaseUrlField(plan: BscModelPlan): 'lmstudio_base_url' | 'openai_base_url' | null {
@@ -145,16 +176,54 @@ function planBaseUrlField(plan: BscModelPlan): 'lmstudio_base_url' | 'openai_bas
   return null;
 }
 
-/** Write the plan into Casper's model settings and remember it as the synced state. */
-export async function applyBscModelPlan(plan: BscModelPlan): Promise<BscSyncSnapshot> {
-  await writeSetting('model_provider', plan.provider);
-  await writeSetting('model_name', plan.model);
-  const field = planBaseUrlField(plan);
-  if (field && plan.baseUrl) await writeSetting(field, plan.baseUrl);
-  const snapshot: BscSyncSnapshot = { provider: plan.provider, model: plan.model, syncedAt: Date.now() };
-  if (plan.baseUrl) snapshot.baseUrl = plan.baseUrl;
-  await writeSetting(SNAPSHOT_KEY, JSON.stringify(snapshot));
-  return snapshot;
+/**
+ * True when the plan points a keyed provider at a different server than the
+ * one the stored key was entered for. The key must not follow the URL: a
+ * changed endpoint (from BSC-V3, i.e. from another machine) would otherwise
+ * receive a credential that was never meant for it.
+ */
+export function planMovesKeyedEndpoint(plan: BscModelPlan, settings: ModelSettings): boolean {
+  if (!plan.baseUrl) return false;
+  const current = currentBaseUrl(settings, plan.provider);
+  return current !== undefined && current !== '' && current !== normalizeBaseUrl(plan.baseUrl);
+}
+
+export interface ApplyOptions {
+  /**
+   * Only write when the DB still matches this snapshot (or has none, when
+   * `null`). Used by background refreshes so a manual change / Stop that
+   * landed while BSC-V3 was being fetched wins.
+   */
+  expectSnapshot?: BscSyncSnapshot | null;
+}
+
+/**
+ * Write the plan into Casper's model settings and remember it as the synced
+ * state, in one transaction. Moving a keyed provider to a new endpoint drops
+ * the stored key for that provider so it has to be re-entered for the new
+ * server. Returns null when `expectSnapshot` no longer matches.
+ */
+export async function applyBscModelPlan(plan: BscModelPlan, opts: ApplyOptions = {}): Promise<BscSyncSnapshot | null> {
+  return db.transaction().execute(async (trx) => {
+    const get = await readSettings(trx);
+    const settings = modelSettingsFrom(get);
+    if (opts.expectSnapshot !== undefined) {
+      const current = get(SNAPSHOT_KEY) ?? null;
+      const expected = opts.expectSnapshot ? JSON.stringify(opts.expectSnapshot) : null;
+      if (current !== expected || !isFollowing(settings, opts.expectSnapshot)) return null;
+    }
+    if (plan.keyField && plan.keyField !== 'openrouter_api_key' && planMovesKeyedEndpoint(plan, settings)) {
+      await deleteSetting(plan.keyField, trx);
+    }
+    await writeSetting('model_provider', plan.provider, trx);
+    await writeSetting('model_name', plan.model, trx);
+    const field = planBaseUrlField(plan);
+    if (field && plan.baseUrl) await writeSetting(field, plan.baseUrl, trx);
+    const snapshot: BscSyncSnapshot = { provider: plan.provider, model: plan.model, syncedAt: Date.now() };
+    if (plan.baseUrl) snapshot.baseUrl = plan.baseUrl;
+    await writeSetting(SNAPSHOT_KEY, JSON.stringify(snapshot), trx);
+    return snapshot;
+  });
 }
 
 function currentBaseUrl(settings: ModelSettings, provider: ModelProvider): string | undefined {
@@ -171,9 +240,15 @@ export function isFollowing(settings: ModelSettings, snapshot: BscSyncSnapshot |
   return (base ?? undefined) === (snapshot.baseUrl ? normalizeBaseUrl(snapshot.baseUrl) : undefined);
 }
 
-export async function hasKeyForPlan(plan: BscModelPlan): Promise<boolean> {
-  if (!plan.keyField) return true;
-  if (plan.keyField === 'lmstudio_api_key') return true;
+/**
+ * Whether a usable local credential exists for the plan. A key stored for a
+ * different endpoint of the same provider does not count (it gets dropped on
+ * apply, see `applyBscModelPlan`).
+ */
+export async function hasKeyForPlan(plan: BscModelPlan, settings?: ModelSettings): Promise<boolean> {
+  if (!plan.keyField || !plan.requiresKey) return true;
+  const current = settings ?? (await getModelSettings());
+  if (plan.keyField !== 'openrouter_api_key' && planMovesKeyedEndpoint(plan, current)) return false;
   return Boolean((await readSetting(plan.keyField))?.trim());
 }
 
@@ -192,28 +267,43 @@ export async function getBscSyncStatus(): Promise<BscSyncStatus> {
  * stale. Any failure (offline, unlinked, 409, 5xx) keeps the current working
  * settings — it never downgrades a configured Casper.
  */
-export async function refreshBscModelIfFollowing(opts: { force?: boolean } = {}): Promise<'refreshed' | 'unchanged' | 'not-following' | 'skipped' | 'failed'> {
-  const { following } = await getBscSyncStatus();
-  if (!following) return 'not-following';
-  if (!opts.force && Date.now() - lastRefreshAt < REFRESH_INTERVAL_MS) return 'skipped';
-  lastRefreshAt = Date.now();
+export async function refreshBscModelIfFollowing(opts: { force?: boolean } = {}): Promise<RefreshResult> {
+  const { following, snapshot } = await getBscSyncStatus();
+  if (!following || !snapshot) return 'not-following';
+  if (inflightRefresh) return inflightRefresh;
+  if (!opts.force && Date.now() < nextRefreshAt) return 'skipped';
+  inflightRefresh = doRefresh(snapshot).finally(() => {
+    inflightRefresh = null;
+  });
+  return inflightRefresh;
+}
+
+async function doRefresh(snapshot: BscSyncSnapshot): Promise<RefreshResult> {
   try {
     const plan = planBscModel(await fetchBscAiSettings());
-    const settings = await getModelSettings();
-    const snapshot = await getSnapshot();
-    const same = snapshot
-      && snapshot.provider === plan.provider
+    nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
+    const same = snapshot.provider === plan.provider
       && snapshot.model === plan.model
       && (snapshot.baseUrl ? normalizeBaseUrl(snapshot.baseUrl) : undefined) === plan.baseUrl;
     if (same) return 'unchanged';
-    if (!(await hasKeyForPlan(plan))) {
+    const settings = await getModelSettings();
+    if (plan.baseUrl && plan.baseUrl !== (snapshot.baseUrl ? normalizeBaseUrl(snapshot.baseUrl) : undefined)) {
+      console.warn(`[casper:bsc-sync] BSC-V3 now points at a different endpoint (${plan.provider}); not switching automatically — use "Use BSC-V3 model" to accept it. Keeping ${settings.provider}/${settings.model}.`);
+      return 'failed';
+    }
+    if (!(await hasKeyForPlan(plan, settings))) {
       console.warn(`[casper:bsc-sync] BSC-V3 moved to ${plan.provider}/${plan.model} but no local ${plan.keyField} is stored; keeping ${settings.provider}/${settings.model}.`);
       return 'failed';
     }
-    await applyBscModelPlan(plan);
+    const applied = await applyBscModelPlan(plan, { expectSnapshot: snapshot });
+    if (!applied) {
+      console.log('[casper:bsc-sync] settings changed while refreshing; left as-is');
+      return 'not-following';
+    }
     console.log(`[casper:bsc-sync] Following BSC-V3: ${plan.provider} / ${plan.model}`);
     return 'refreshed';
   } catch (err) {
+    nextRefreshAt = Date.now() + FAILED_REFRESH_BACKOFF_MS;
     console.warn('[casper:bsc-sync] refresh skipped:', err instanceof Error ? err.message : String(err));
     return 'failed';
   }

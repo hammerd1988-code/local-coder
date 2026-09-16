@@ -75,50 +75,48 @@ router.delete('/messages', async (req: express.Request, res: express.Response) =
 // picker instead of a free-text field (typos there fail as opaque 500s).
 router.get('/models', async (_req: express.Request, res: express.Response) => {
   const settings = await getModelSettings();
-  const result: { provider: string; models: string[] }[] = [];
-
   const lmstudioUrl = normalizeBaseUrl(settings.lmstudioBaseUrl);
-  try {
-    const r = await fetch(`${lmstudioUrl}/v1/models`, {
-      headers: authHeaders(settings.lmstudioApiKey),
-      signal: AbortSignal.timeout(3000),
-    });
-    const data = await r.json();
-    result.push({ provider: 'lmstudio', models: (data.data ?? []).map((m: any) => m.id) });
-  } catch {
-    result.push({ provider: 'lmstudio', models: [] });
-  }
-
   const ollamaUrl = normalizeBaseUrl(settings.ollamaBaseUrl);
-  try {
-    const r = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) });
-    const data = await r.json();
-    result.push({ provider: 'ollama', models: (data.models ?? []).map((m: any) => m.name) });
-  } catch {
-    result.push({ provider: 'ollama', models: [] });
-  }
-
-  try {
-    result.push({ provider: 'openrouter', models: await listOpenRouterModels(settings.openrouterApiKey) });
-  } catch {
-    result.push({ provider: 'openrouter', models: [] });
-  }
-
   const openaiUrl = normalizeBaseUrl(settings.openaiBaseUrl);
-  if (openaiUrl) {
+
+  const catalog = async (provider: string, load: () => Promise<string[]>) => {
     try {
+      return { provider, models: await load() };
+    } catch {
+      return { provider, models: [] };
+    }
+  };
+
+  // Independent providers are probed concurrently so a stopped local server
+  // or an offline machine doesn't stack up timeouts. Cloud catalogs are only
+  // fetched for the provider actually in use.
+  const result = await Promise.all([
+    catalog('lmstudio', async () => {
+      const r = await fetch(`${lmstudioUrl}/v1/models`, {
+        headers: authHeaders(settings.lmstudioApiKey),
+        signal: AbortSignal.timeout(3000),
+      });
+      const data = await r.json();
+      return (data.data ?? []).map((m: any) => m.id);
+    }),
+    catalog('ollama', async () => {
+      const r = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) });
+      const data = await r.json();
+      return (data.models ?? []).map((m: any) => m.name);
+    }),
+    catalog('openrouter', async () => (
+      settings.provider === 'openrouter' ? listOpenRouterModels(settings.openrouterApiKey) : []
+    )),
+    catalog('openai', async () => {
+      if (settings.provider !== 'openai' || !openaiUrl) return [];
       const r = await fetch(`${openaiUrl}/v1/models`, {
         headers: authHeaders(settings.openaiApiKey),
         signal: AbortSignal.timeout(4000),
       });
       const data = await r.json();
-      result.push({ provider: 'openai', models: (data.data ?? []).map((m: any) => String(m.id)).filter(Boolean).sort() });
-    } catch {
-      result.push({ provider: 'openai', models: [] });
-    }
-  } else {
-    result.push({ provider: 'openai', models: [] });
-  }
+      return (data.data ?? []).map((m: any) => String(m.id)).filter(Boolean).sort();
+    }),
+  ]);
 
   res.json(result);
   return;
@@ -155,14 +153,17 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
 
   try {
     const { messages, model } = req.body;
-    await refreshBscModelIfFollowing();
+    // While following BSC-V3 the configured model is authoritative; the
+    // browser's copy of it may predate a sync.
+    const sync = await refreshBscModelIfFollowing();
+    const requestedModel = sync === 'not-following' ? model : undefined;
     const settings = await getModelSettings();
     const provider = settings.provider;
 
     if (provider !== 'ollama') {
       // LM Studio, OpenRouter and OpenAI-compatible servers all speak the
       // OpenAI API: SSE lines carrying delta objects
-      const target = await resolveCompletionTarget(settings, model);
+      const target = await resolveCompletionTarget(settings, requestedModel);
       if (!target.model) {
         throw new Error('No model loaded in LM Studio — load one, or set a model name in settings. If LM Studio requires an API token, set it in settings.');
       }
@@ -188,7 +189,7 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
     } else {
       // Ollama streams newline-delimited JSON objects
       const baseUrl = normalizeBaseUrl(settings.ollamaBaseUrl);
-      const target = (await resolveModel('ollama', model, baseUrl)) || 'llama3';
+      const target = (await resolveModel('ollama', requestedModel || settings.model, baseUrl)) || 'llama3';
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

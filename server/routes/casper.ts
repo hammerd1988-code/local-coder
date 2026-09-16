@@ -195,6 +195,9 @@ router.post('/bsc-model/unfollow', async (_req, res) => {
 
 router.post('/unlink', async (_req, res) => {
   casperDaemon.stop();
+  // The followed model belonged to the account being unlinked; a different
+  // account linked later must not inherit it.
+  await clearSnapshot();
   await clearAuth();
   res.json({ ok: true, ...casperDaemon.getStatus(), linked: false });
   return;
