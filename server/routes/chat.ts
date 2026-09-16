@@ -194,6 +194,8 @@ router.post('/complete', async (req: express.Request, res: express.Response) => 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: target, messages, stream: true })
+      }).catch(() => {
+        throw new Error(`Ollama is not reachable at ${baseUrl} — is it running? Check the Ollama base URL in settings.`);
       });
 
       if (!response.ok || !response.body) {
