@@ -28,6 +28,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# IDE terminal needs bash (node-pty spawns bash; alpine ships busybox only)
+# and git (terminal aliases + workspace clones)
+RUN apk add --no-cache git bash
+
 # Install only production dependencies; the native-module toolchain is only
 # needed during npm ci, so drop it afterwards to keep the image small
 RUN apk add --no-cache --virtual .build-deps python3 make g++ \
