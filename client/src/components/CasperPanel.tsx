@@ -17,6 +17,8 @@ interface CasperStatus {
   face?: string;
   brain?: string;
   home?: string;
+  model?: { provider: string; providerLabel: string; name: string };
+  bscSync?: { following: boolean; snapshot: { provider: string; model: string } | null };
 }
 
 export default function CasperPanel() {
@@ -146,7 +148,7 @@ export default function CasperPanel() {
       <div className="p-4 border-b border-burgundy-500/50">
         <h2 className="font-semibold text-burgundy-300">{'>'} Casper Remote</h2>
         <p className="text-[11px] text-purple-300/70 mt-1">
-          Casper is the agent. Local Code is home. Your local model is the brain.
+          Casper is the agent. Local Code is home. Your configured model is the brain.
           Link to Blood Sweat Code (Railway) so phone/web can reach this machine.
         </p>
       </div>
@@ -244,7 +246,12 @@ export default function CasperPanel() {
         </div>
 
         <div className="text-[10px] text-purple-400/50 space-y-1 border-t border-white/5 pt-3">
-          <p>Face: Casper · Home: Local Code · Brain: your local model</p>
+          <p>
+            Face: Casper · Home: Local Code · Brain:{' '}
+            {status?.model?.name
+              ? `${status.model.providerLabel} / ${status.model.name}${status.bscSync?.following ? ' (following BSC-V3)' : ''}`
+              : status?.model?.providerLabel ?? 'your configured model'}
+          </p>
           <p>Remote chats from BSC mobile/web hit this daemon over the Railway relay.</p>
         </div>
       </div>

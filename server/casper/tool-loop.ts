@@ -1,6 +1,7 @@
-import { db } from '../db.js';
 import { LOCAL_TOOL_SPECS, runLocalTool } from './tools.js';
-import { authHeaders, resolveModel } from '../model-resolver.js';
+import { authHeaders } from '../model-resolver.js';
+import { getModelSettings, resolveCompletionTarget } from '../model-provider.js';
+import { refreshBscModelIfFollowing } from './bsc-model-sync.js';
 
 /** Keep in sync with client/src/lib/casper.ts — coding-agent Casper (BSC CLI voice). */
 const CASPER_SYSTEM = `You are Casper — the ghost-in-the-machine AI agent for Blood Sweat Code, running inside Local Code on the user's machine.
@@ -12,18 +13,6 @@ Engineering excellence: Principal-level. Read code before guessing. Prefer minim
 You have tools for shell, read/write files, search, and git in the open workspace. Be efficient. Chain operations logically. Report results concisely. Warn before destructive commands (rm -rf, force push, etc.). When done, summarize what you changed.`;
 
 type ChatMsg = { role: string; content: string | null; tool_calls?: any[]; tool_call_id?: string; name?: string };
-
-async function getModelSettings() {
-  const rows = await db.selectFrom('settings').select(['key', 'value']).execute();
-  const get = (k: string) => rows.find((r) => r.key === k)?.value;
-  return {
-    provider: get('model_provider') || 'lmstudio',
-    model: get('model_name') || '',
-    ollama: get('ollama_base_url') || 'http://localhost:11434',
-    lmstudio: get('lmstudio_base_url') || 'http://localhost:1234',
-    lmstudioApiKey: get('lmstudio_api_key') || '',
-  };
-}
 
 export interface ToolLoopHooks {
   onToken?: (token: string) => void;
@@ -43,18 +32,18 @@ function approvalDetail(name: string, args: Record<string, unknown>): string {
 }
 
 /**
- * OpenAI-compatible tool loop using the user's configured local model.
+ * OpenAI-compatible tool loop using the user's configured model provider
+ * (LM Studio / Ollama locally, OpenRouter or any OpenAI-compatible cloud).
  * LM Studio supports tools; Ollama may depending on model — we try tools first.
  */
 export async function runCasperToolLoop(
   history: { role: string; content: string }[],
   hooks: ToolLoopHooks = {}
 ): Promise<string> {
-  const settings = await getModelSettings();
-  const providerBase = settings.provider === 'ollama' ? settings.ollama : settings.lmstudio;
-  const base = `${providerBase.replace(/\/$/, '')}/v1`;
-  const apiKey = settings.provider === 'ollama' ? '' : settings.lmstudioApiKey;
-  const model = await resolveModel(settings.provider, settings.model, providerBase, apiKey);
+  await refreshBscModelIfFollowing();
+  const target = await resolveCompletionTarget(await getModelSettings());
+  const { openAiBase: base, apiKey, model } = target;
+  const extraHeaders = target.headers;
 
   const messages: ChatMsg[] = [
     { role: 'system', content: CASPER_SYSTEM },
@@ -67,7 +56,7 @@ export async function runCasperToolLoop(
 
     const response = await fetch(`${base}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(apiKey) },
+      headers: { 'Content-Type': 'application/json', ...extraHeaders, ...authHeaders(apiKey) },
       body: JSON.stringify({
         model: model || undefined,
         messages,
@@ -79,9 +68,11 @@ export async function runCasperToolLoop(
 
     if (!response.ok) {
       const errText = await response.text();
-      // Fallback: no-tools completion (some local stacks reject tools)
-      if (/tool/i.test(errText) || response.status === 400) {
-        return runPlainCompletion(base, model, messages, hooks, apiKey);
+      // Fallback: no-tools completion (some local stacks reject tools). A 400
+      // from a cloud provider is a real error (bad model id, quota), not that.
+      const local = target.provider === 'lmstudio' || target.provider === 'ollama';
+      if (/tool/i.test(errText) || (local && response.status === 400)) {
+        return runPlainCompletion(base, model, messages, hooks, apiKey, extraHeaders);
       }
       throw new Error(`Model error: ${response.status} ${errText.slice(0, 300)}`);
     }
@@ -152,11 +143,12 @@ async function runPlainCompletion(
   model: string | undefined,
   messages: ChatMsg[],
   hooks: ToolLoopHooks,
-  apiKey?: string
+  apiKey?: string,
+  extraHeaders: Record<string, string> = {}
 ): Promise<string> {
   const response = await fetch(`${base}/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders(apiKey) },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders, ...authHeaders(apiKey) },
     body: JSON.stringify({
       model: model || undefined,
       messages: messages.map((m) => ({ role: m.role, content: m.content || '' })),

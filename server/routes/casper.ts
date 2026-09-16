@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import {
   clearAuth,
   ensureMachineIdentity,
@@ -12,6 +12,17 @@ import {
 } from '../casper/config.js';
 import { casperDaemon } from '../casper/daemon.js';
 import { getWorkspaceRoot } from '../workspace.js';
+import {
+  BscSyncError,
+  applyBscModelPlan,
+  clearSnapshot,
+  fetchBscAiSettings,
+  getBscSyncStatus,
+  hasKeyForPlan,
+  planBscModel,
+  refreshBscModelIfFollowing,
+} from '../casper/bsc-model-sync.js';
+import { PROVIDER_LABELS, getModelSettings } from '../model-provider.js';
 
 const router = Router();
 
@@ -22,9 +33,13 @@ router.get('/status', async (_req, res) => {
     const relayUrl = await getRelayUrl();
     const workspace = await getWorkspaceRoot();
     const daemon = casperDaemon.getStatus();
+    const model = await getModelSettings();
+    const bscSync = await getBscSyncStatus();
     res.json({
       ...daemon,
       linked: !!token,
+      model: { provider: model.provider, providerLabel: PROVIDER_LABELS[model.provider], name: model.model },
+      bscSync,
       userId: await getUserId(),
       machineId: identity.machineId,
       machineName: identity.machineName,
@@ -32,7 +47,7 @@ router.get('/status', async (_req, res) => {
       approvalLevel: await getApprovalLevel(),
       workspaceRoot: workspace,
       face: 'Casper',
-      brain: 'local-model',
+      brain: bscSync.following ? 'bsc-v3' : model.provider,
       home: 'Local Code',
     });
     return;
@@ -117,6 +132,65 @@ router.post('/link/poll', async (req, res) => {
     res.status(502).json({ error: error instanceof Error ? error.message : 'Poll failed' });
     return;
   }
+});
+
+function sendSyncError(res: Response, error: unknown, fallback: string) {
+  if (error instanceof BscSyncError) {
+    res.status(error.status >= 400 && error.status < 600 ? error.status : 502).json({ error: error.message });
+    return;
+  }
+  console.error(fallback, error);
+  res.status(500).json({ error: error instanceof Error ? error.message : fallback });
+}
+
+/** Preview what "Same model as BSC-V3" would set, without changing anything. */
+router.get('/bsc-model', async (_req, res) => {
+  try {
+    const remote = await fetchBscAiSettings();
+    const plan = planBscModel(remote);
+    res.json({
+      plan: { provider: plan.provider, providerLabel: PROVIDER_LABELS[plan.provider], model: plan.model, baseUrl: plan.baseUrl ?? null },
+      needsKey: !(await hasKeyForPlan(plan)),
+      keyField: plan.keyField,
+      modelSource: remote.modelSource,
+      endpointSource: remote.endpointSource,
+      ...(await getBscSyncStatus()),
+    });
+    return;
+  } catch (error) {
+    sendSyncError(res, error, 'casper bsc-model preview');
+  }
+});
+
+/** Copy the BSC-V3 AI Core model/endpoint into Casper's settings and follow it. */
+router.post('/bsc-model/apply', async (_req, res) => {
+  try {
+    const plan = planBscModel(await fetchBscAiSettings());
+    const snapshot = await applyBscModelPlan(plan);
+    res.json({
+      snapshot,
+      providerLabel: PROVIDER_LABELS[plan.provider],
+      needsKey: !(await hasKeyForPlan(plan)),
+      keyField: plan.keyField,
+      following: true,
+    });
+    return;
+  } catch (error) {
+    sendSyncError(res, error, 'casper bsc-model apply');
+  }
+});
+
+/** Re-check BSC-V3 now (only changes settings while still following). */
+router.post('/bsc-model/refresh', async (_req, res) => {
+  const result = await refreshBscModelIfFollowing({ force: true });
+  res.json({ result, ...(await getBscSyncStatus()) });
+  return;
+});
+
+router.post('/bsc-model/unfollow', async (_req, res) => {
+  await clearSnapshot();
+  res.json(await getBscSyncStatus());
+  return;
 });
 
 router.post('/unlink', async (_req, res) => {
