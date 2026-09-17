@@ -6,6 +6,7 @@ import {
   modelSettingsFrom,
   normalizeBaseUrl,
   readSettings,
+  settingEnvDefault,
   type ModelProvider,
   type ModelSettings,
 } from '../model-provider.js';
@@ -249,7 +250,7 @@ export async function hasKeyForPlan(plan: BscModelPlan, settings?: ModelSettings
   if (!plan.keyField || !plan.requiresKey) return true;
   const current = settings ?? (await getModelSettings());
   if (plan.keyField !== 'openrouter_api_key' && planMovesKeyedEndpoint(plan, current)) return false;
-  return Boolean((await readSetting(plan.keyField))?.trim());
+  return Boolean((await readSetting(plan.keyField))?.trim() || settingEnvDefault(plan.keyField));
 }
 
 export interface BscSyncStatus {
