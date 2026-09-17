@@ -184,23 +184,45 @@ function NodeSwitcher() {
 }
 
 function OpsDeck() {
-  const { selectedId } = useNode();
+  const { selectedId, apiBase } = useNode();
   const [module, setModule] = React.useState<ModuleId>('dashboard');
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const [online, setOnline] = React.useState(false);
 
   React.useEffect(() => {
+    let disposed = false;
+    let pingInFlight = false;
+    let pingController: AbortController | null = null;
     document.title = 'NEO//OPS — Server Control Deck';
     setOverview(null);
     setOnline(false);
-    const ping = () =>
-      opsGet<Overview>('/api/system/overview')
-        .then((o) => { setOverview(o); setOnline(true); })
-        .catch(() => setOnline(false));
+    const ping = async () => {
+      if (pingInFlight) return;
+      pingInFlight = true;
+      const controller = new AbortController();
+      pingController = controller;
+      try {
+        const data = await opsGet<Overview>('/api/system/overview', { signal: controller.signal, timeoutMs: 10_000 });
+        if (disposed) return;
+        setOverview(data);
+        setOnline(true);
+      } catch {
+        if (disposed) return;
+        setOverview(null);
+        setOnline(false);
+      } finally {
+        if (pingController === controller) pingController = null;
+        pingInFlight = false;
+      }
+    };
     ping();
     const t = setInterval(ping, 15_000);
-    return () => clearInterval(t);
-  }, [selectedId]);
+    return () => {
+      disposed = true;
+      clearInterval(t);
+      pingController?.abort();
+    };
+  }, [selectedId, apiBase]);
 
   // Keyboard shortcuts: Alt+1..7 switch modules
   React.useEffect(() => {

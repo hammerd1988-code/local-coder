@@ -44,24 +44,50 @@ export function NodeProvider({ children }: { children: React.ReactNode }) {
   const [nodes, setNodes] = React.useState<NodeSummary[]>([LOCAL]);
   const [selectedId, setSelectedId] = React.useState('local');
   const [envRegistry, setEnvRegistry] = React.useState(false);
+  const pollRequestRef = React.useRef(0);
+  const pollInFlightRef = React.useRef(false);
+  const pollAbortRef = React.useRef<AbortController | null>(null);
 
   const poll = React.useCallback(async () => {
+    pollAbortRef.current?.abort();
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 4000);
+    const requestId = ++pollRequestRef.current;
+    pollInFlightRef.current = true;
     try {
       // Node registry always comes from the hub itself (base '').
-      const res = await fetch('/api/nodes');
-      if (!res.ok) return;
+      const res = await fetch('/api/nodes', { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (requestId !== pollRequestRef.current) return;
       if (Array.isArray(data?.nodes) && data.nodes.length > 0) setNodes(data.nodes);
       if (typeof data?.envRegistry === 'boolean') setEnvRegistry(data.envRegistry);
-    } catch { /* keep last known registry */ }
+    } catch {
+      if (requestId !== pollRequestRef.current) return;
+      setNodes((current) => current.map((node) => ({ ...node, status: 'down' })));
+    } finally {
+      window.clearTimeout(timeout);
+      if (pollAbortRef.current === controller) pollAbortRef.current = null;
+      if (requestId === pollRequestRef.current) pollInFlightRef.current = false;
+    }
   }, []);
 
   React.useEffect(() => {
     let disposed = false;
-    const tick = () => { if (!disposed) poll(); };
+    const tick = () => {
+      if (!disposed && !pollInFlightRef.current) poll();
+    };
     tick();
     const t = setInterval(tick, 5000);
-    return () => { disposed = true; clearInterval(t); };
+    return () => {
+      disposed = true;
+      clearInterval(t);
+      pollRequestRef.current += 1;
+      pollAbortRef.current?.abort();
+      pollAbortRef.current = null;
+      pollInFlightRef.current = false;
+    };
   }, [poll]);
 
   const addNode = React.useCallback(async (input: AddNodeInput) => {

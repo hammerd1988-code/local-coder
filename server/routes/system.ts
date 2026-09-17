@@ -425,7 +425,7 @@ router.get('/network', async (_req, res) => {
 router.get('/disks', async (_req, res) => {
   const { stdout, code } = await run('df', ['-kP', '-x', 'tmpfs', '-x', 'devtmpfs', '-x', 'overlay2']);
   if (code !== 0) {
-    res.json({ disks: [] });
+    res.status(503).json({ error: 'Storage telemetry unavailable' });
     return;
   }
   const disks = stdout
@@ -456,12 +456,14 @@ const LOG_ROOT = '/var/log';
 
 router.get('/logs', async (_req, res) => {
   const files: { name: string; path: string; size: number; mtime: number }[] = [];
+  let fileCatalogAvailable = true;
   async function walk(dir: string, depth: number) {
     if (depth > 2) return;
     let entries;
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
+      if (dir === LOG_ROOT) fileCatalogAvailable = false;
       return;
     }
     for (const e of entries) {
@@ -479,8 +481,14 @@ router.get('/logs', async (_req, res) => {
   files.sort((a, b) => b.mtime - a.mtime);
 
   const sources: string[] = [];
-  if ((await run('journalctl', ['--no-pager', '-n', '1'], 5000)).code === 0) sources.push('journalctl');
-  if ((await run('dmesg', ['-T'], 5000)).code === 0) sources.push('dmesg');
+  const journal = await run('journalctl', ['--no-pager', '-n', '1'], 5000);
+  const kernel = await run('dmesg', ['-T'], 5000);
+  if (journal.code === 0) sources.push('journalctl');
+  if (kernel.code === 0) sources.push('dmesg');
+  if (!fileCatalogAvailable && sources.length === 0) {
+    res.status(503).json({ error: 'Log sources unavailable' });
+    return;
+  }
   res.json({ files, sources });
 });
 
@@ -490,11 +498,19 @@ router.get('/logs/tail', async (req, res) => {
 
   if (source === 'journalctl') {
     const r = await run('journalctl', ['--no-pager', '-n', String(lines)], 10_000);
-    res.json({ content: r.stdout || r.stderr });
+    if (r.code !== 0) {
+      res.status(503).json({ error: 'journalctl unavailable' });
+      return;
+    }
+    res.json({ content: r.stdout });
     return;
   }
   if (source === 'dmesg') {
     const r = await run('dmesg', ['-T'], 10_000);
+    if (r.code !== 0) {
+      res.status(503).json({ error: 'dmesg unavailable' });
+      return;
+    }
     const all = r.stdout.split('\n');
     res.json({ content: all.slice(-lines).join('\n') });
     return;
