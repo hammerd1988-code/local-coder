@@ -1,7 +1,7 @@
 import express from 'express';
 import { db } from '../db.js';
 import { invalidateLicenseCache } from '../license.js';
-import { SETTING_ENV_DEFAULTS, settingEnvDefault } from '../model-provider.js';
+import { SETTING_ENV_DEFAULTS, normalizeProvider, settingEnvDefault } from '../model-provider.js';
 
 const router = express.Router();
 
@@ -34,6 +34,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
       const fallback = settingEnvDefault(key);
       if (fallback) settingsObj[key] = SECRET_KEYS.has(key) ? SECRET_PLACEHOLDER : fallback;
     }
+    if (settingsObj.model_provider) settingsObj.model_provider = normalizeProvider(settingsObj.model_provider);
 
     res.json(settingsObj);
     return;
