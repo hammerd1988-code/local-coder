@@ -58,9 +58,31 @@ export function normalizeBaseUrl(url: string): string {
 
 export type SettingsReader = Pick<typeof db, 'selectFrom'>;
 
+/**
+ * Environment fallbacks for model settings, used when the settings table has
+ * no value for a key. Lets hosted deployments (Railway) be configured from
+ * variables without a persistent data volume or a first visit to the UI.
+ */
+export const SETTING_ENV_DEFAULTS: Record<string, string> = {
+  model_provider: 'MODEL_PROVIDER',
+  model_name: 'MODEL_NAME',
+  ollama_base_url: 'OLLAMA_BASE_URL',
+  lmstudio_base_url: 'LMSTUDIO_BASE_URL',
+  lmstudio_api_key: 'LMSTUDIO_API_KEY',
+  openrouter_api_key: 'OPENROUTER_API_KEY',
+  openai_base_url: 'OPENAI_BASE_URL',
+  openai_api_key: 'OPENAI_API_KEY',
+};
+
+export function settingEnvDefault(key: string): string | undefined {
+  const envName = SETTING_ENV_DEFAULTS[key];
+  const value = envName ? process.env[envName]?.trim() : undefined;
+  return value || undefined;
+}
+
 export async function readSettings(conn: SettingsReader = db): Promise<(key: string) => string | undefined> {
   const rows = await conn.selectFrom('settings').select(['key', 'value']).execute();
-  return (key: string) => rows.find((r) => r.key === key)?.value;
+  return (key: string) => rows.find((r) => r.key === key)?.value || settingEnvDefault(key);
 }
 
 export async function getModelSettings(conn: SettingsReader = db): Promise<ModelSettings> {

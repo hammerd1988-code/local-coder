@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db.js';
 import { invalidateLicenseCache } from '../license.js';
+import { SETTING_ENV_DEFAULTS, settingEnvDefault } from '../model-provider.js';
 
 const router = express.Router();
 
@@ -25,7 +26,15 @@ router.get('/', async (req: express.Request, res: express.Response) => {
         : setting.value;
       return acc;
     }, {} as Record<string, string>);
-    
+
+    // Model settings supplied via environment show up like saved values so
+    // the UI reflects what the server actually uses.
+    for (const key of Object.keys(SETTING_ENV_DEFAULTS)) {
+      if (settingsObj[key]) continue;
+      const fallback = settingEnvDefault(key);
+      if (fallback) settingsObj[key] = SECRET_KEYS.has(key) ? SECRET_PLACEHOLDER : fallback;
+    }
+
     res.json(settingsObj);
     return;
   } catch (error) {
