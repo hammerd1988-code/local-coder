@@ -30,7 +30,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
     // Model settings supplied via environment show up like saved values so
     // the UI reflects what the server actually uses.
     for (const key of Object.keys(SETTING_ENV_DEFAULTS)) {
-      if (settingsObj[key]) continue;
+      if (settingsObj[key]?.trim()) continue;
       const fallback = settingEnvDefault(key);
       if (fallback) settingsObj[key] = SECRET_KEYS.has(key) ? SECRET_PLACEHOLDER : fallback;
     }
