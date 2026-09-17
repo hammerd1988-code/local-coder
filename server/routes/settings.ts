@@ -34,7 +34,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
       const fallback = settingEnvDefault(key);
       if (fallback) settingsObj[key] = SECRET_KEYS.has(key) ? SECRET_PLACEHOLDER : fallback;
     }
-    if (settingsObj.model_provider) settingsObj.model_provider = normalizeProvider(settingsObj.model_provider);
+    settingsObj.model_provider = normalizeProvider(settingsObj.model_provider);
 
     res.json(settingsObj);
     return;
