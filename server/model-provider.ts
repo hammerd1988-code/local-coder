@@ -82,7 +82,8 @@ export function settingEnvDefault(key: string): string | undefined {
 
 export async function readSettings(conn: SettingsReader = db): Promise<(key: string) => string | undefined> {
   const rows = await conn.selectFrom('settings').select(['key', 'value']).execute();
-  return (key: string) => rows.find((r) => r.key === key)?.value || settingEnvDefault(key);
+  const values = new Map(rows.map((r) => [r.key, r.value?.trim()] as const));
+  return (key: string) => values.get(key) || settingEnvDefault(key);
 }
 
 export async function getModelSettings(conn: SettingsReader = db): Promise<ModelSettings> {
