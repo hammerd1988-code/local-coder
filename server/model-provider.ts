@@ -29,11 +29,12 @@ export interface ModelSettings {
 }
 
 export function normalizeProvider(value: string | undefined | null): ModelProvider {
-  switch ((value ?? '').trim()) {
+  const normalized = (value ?? '').trim().toLowerCase();
+  switch (normalized) {
     case 'ollama':
     case 'openrouter':
     case 'openai':
-      return value!.trim() as ModelProvider;
+      return normalized;
     default:
       return 'lmstudio';
   }
