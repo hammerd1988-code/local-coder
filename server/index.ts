@@ -20,6 +20,7 @@ import nodesRouter, { proxyNodeHttp, proxyNodeWs } from './routes/nodes.js';
 import { startTunnels, stopTunnels } from './ops/tunnels.js';
 import { casperDaemon } from './casper/daemon.js';
 import { getAccessToken } from './casper/config.js';
+import { refreshBscModelIfFollowing } from './casper/bsc-model-sync.js';
 import { metricsMiddleware, metricsHandler } from './metrics.js';
 import { getLicenseStatus, invalidateLicenseCache } from './license.js';
 
@@ -146,8 +147,9 @@ export async function startServer(port: number | string) {
     // Reconnect Casper to the relay on boot if this machine is already paired,
     // so remote (phone/web) directives keep working across restarts.
     getAccessToken()
-      .then((token) => {
+      .then(async (token) => {
         if (!token) return;
+        await refreshBscModelIfFollowing();
         console.log('[casper] machine is linked — auto-starting daemon');
         return casperDaemon.start();
       })

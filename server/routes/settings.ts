@@ -9,7 +9,7 @@ const router = express.Router();
  * placeholder instead, and PUTs of the placeholder are ignored so a client
  * echoing settings back doesn't clobber the stored secret.
  */
-const SECRET_KEYS = new Set(['lmstudio_api_key', 'bsc_license_key']);
+const SECRET_KEYS = new Set(['lmstudio_api_key', 'openrouter_api_key', 'openai_api_key', 'bsc_license_key']);
 export const SECRET_PLACEHOLDER = '********';
 
 // Get all settings
