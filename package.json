@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "build": "vite build && tsc --project tsconfig.server.json",
     "start": "tsx watch scripts/dev.ts",
@@ -10,8 +13,9 @@
     "app:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
     "app:linux": "bash scripts/local-coder-launch.sh",
     "app:linux:install": "bash scripts/install-linux-desktop.sh",
+    "check:node": "node scripts/check-node-version.mjs",
     "lint": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit",
-    "test": "echo \"No tests configured yet\" && exit 0",
+    "test": "node --test scripts/check-node-version.test.mjs scripts/local-coder-launch.test.mjs",
     "test:coverage": "echo \"No coverage configured yet\" && exit 0",
     "docker:build": "docker build -t local-coder .",
     "docker:build:dev": "docker build -t local-coder:dev -f Dockerfile.dev .",

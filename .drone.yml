@@ -5,13 +5,13 @@ name: default
 steps:
   # Step 1: Install dependencies
   - name: install
-    image: node:20-alpine
+    image: node:22-alpine
     commands:
       - npm ci
 
   # Step 2: Lint and type check
   - name: lint
-    image: node:20-alpine
+    image: node:22-alpine
     commands:
       - npx tsc --noEmit
       - npx tsc --project tsconfig.server.json --noEmit
@@ -20,16 +20,17 @@ steps:
 
   # Step 3: Run tests
   - name: test
-    image: node:20-alpine
+    image: node:22-alpine
     commands:
+      - apk add --no-cache bash
       - echo "Running tests..."
-      # - npm test
+      - npm test
     depends_on:
       - install
 
   # Step 4: Build application
   - name: build
-    image: node:20-alpine
+    image: node:22-alpine
     commands:
       - npm run build
     depends_on:

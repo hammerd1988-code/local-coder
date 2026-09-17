@@ -60,8 +60,9 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-command -v node >/dev/null 2>&1 || { echo "Error: node not found. Install Node.js 20+ first (https://nodejs.org)." >&2; exit 1; }
-command -v npm >/dev/null 2>&1 || { echo "Error: npm not found. Install Node.js 20+ first (https://nodejs.org)." >&2; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "Error: node not found. Install Node.js 22.12+ first (https://nodejs.org)." >&2; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "Error: npm not found. Install Node.js 22.12+ first (https://nodejs.org)." >&2; exit 1; }
+node "$ROOT/scripts/check-node-version.mjs"
 NODE_BIN="$(command -v node)"
 
 # The compiled entry lives at dist/server/server/index.js because the server
@@ -77,12 +78,16 @@ find_server_entry() {
   return 1
 }
 
+# Rebuild native dependencies for the selected Node ABI.
+if [ -d "$ROOT/node_modules" ]; then
+  (cd "$ROOT" && npm rebuild better-sqlite3 node-pty)
+else
+  (cd "$ROOT" && npm ci --legacy-peer-deps)
+fi
+
 # Build the production bundle if it does not exist yet.
 if ! find_server_entry >/dev/null || [ ! -f "$ROOT/dist/public/index.html" ]; then
   echo "Production build not found - building..."
-  if [ ! -d "$ROOT/node_modules" ]; then
-    (cd "$ROOT" && npm install)
-  fi
   (cd "$ROOT" && npm run build)
 fi
 SERVER_ENTRY="$(find_server_entry)" || { echo "Error: build did not produce a server entry under dist/." >&2; exit 1; }

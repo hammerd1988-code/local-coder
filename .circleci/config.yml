@@ -9,7 +9,7 @@ orbs:
 executors:
   node-executor:
     docker:
-      - image: cimg/node:20.11
+      - image: cimg/node:22.23
     working_directory: ~/project
 
 # Reusable commands
@@ -52,9 +52,7 @@ jobs:
       - install-dependencies
       - run:
           name: Run tests
-          command: |
-            echo "Running tests..."
-            # npm test
+          command: npm test
       - run:
           name: Generate coverage
           command: |
