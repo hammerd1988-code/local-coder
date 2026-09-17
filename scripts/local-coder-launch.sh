@@ -48,12 +48,22 @@ fi
 log "Starting Local Code..."
 
 start_via_systemd() {
+  local service_node
   command -v systemctl >/dev/null 2>&1 || return 1
   # A user manager must actually be reachable (list-unit-files alone would
   # succeed by reading unit files from disk even without a user session).
   systemctl --user show-environment >/dev/null 2>&1 || return 1
   systemctl --user list-unit-files "$SERVICE_NAME" --no-legend 2>/dev/null \
     | grep -q "$SERVICE_NAME" || return 1
+  service_node="$(
+    systemctl --user show "$SERVICE_NAME" --property=ExecStart --value 2>/dev/null \
+      | sed -n 's/.*path=\([^ ;}]*\).*/\1/p'
+  )"
+  if [ ! -x "$service_node" ] || ! "$service_node" "$ROOT/scripts/check-node-version.mjs" >> "$LOG_FILE" 2>&1; then
+    notify "The installed service uses an unsupported Node runtime. Run: npm run app:linux:install"
+    log "Installed service runtime is missing or unsupported (${service_node:-unknown})"
+    return 2
+  fi
   systemctl --user start "$SERVICE_NAME"
 }
 
@@ -70,9 +80,22 @@ find_server_entry() {
   return 1
 }
 
-if start_via_systemd; then
+start_via_systemd
+systemd_result=$?
+if [ "$systemd_result" -eq 0 ]; then
   log "Starting via systemd user service"
+elif [ "$systemd_result" -eq 2 ]; then
+  exit 1
 else
+  command -v node >/dev/null 2>&1 || {
+    notify "Node.js was not found. Install Node.js 22.12 or newer."
+    log "Missing Node.js runtime - aborting"
+    exit 1
+  }
+  if ! node "$ROOT/scripts/check-node-version.mjs" >> "$LOG_FILE" 2>&1; then
+    notify "Local Code requires Node.js 22.12 or newer. See data/launcher.log"
+    exit 1
+  fi
   ENTRY="$(find_server_entry)" || {
     notify "Local Code is not built yet. Run: npm run build (in $ROOT)"
     log "Missing production build - aborting"

@@ -102,6 +102,16 @@ cd dist && NODE_ENV=production PORT=4000 node server/server/index.js
 - `PORT`: Server port (default: 3001 dev, 4000 prod)
 - `DATA_DIRECTORY`: Path to persistent data directory (default: `/home/app/data`)
 
+Casper model defaults (optional; used when nothing has been saved in Casper
+settings — values saved in the UI take precedence). Handy for hosted
+deployments such as Railway:
+
+- `MODEL_PROVIDER`: `lmstudio` | `ollama` | `openrouter` | `openai`
+- `MODEL_NAME`: model id, e.g. `qwen/qwen3.8-27b`
+- `OPENROUTER_API_KEY`: OpenRouter key (provider `openrouter`)
+- `OPENAI_BASE_URL`, `OPENAI_API_KEY`: OpenAI-compatible server (provider `openai`)
+- `LMSTUDIO_BASE_URL`, `LMSTUDIO_API_KEY`, `OLLAMA_BASE_URL`: local servers
+
 Copy `.env.example` to `.env` and adjust as needed.
 
 ## Project Structure

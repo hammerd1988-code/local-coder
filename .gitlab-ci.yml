@@ -21,7 +21,7 @@ cache:
 # Lint and type check stage
 lint:
   stage: lint
-  image: node:20-alpine
+  image: node:22-alpine
   before_script:
     - npm ci --cache .npm --prefer-offline
   script:
@@ -37,13 +37,13 @@ lint:
 # Test stage
 test:
   stage: test
-  image: node:20-alpine
+  image: node:22-alpine
   before_script:
+    - apk add --no-cache bash
     - npm ci --cache .npm --prefer-offline
   script:
     - echo "Running tests..."
-    # Add test commands when configured
-    # - npm test
+    - npm test
     # - npm run test:coverage
   coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
   artifacts:
@@ -63,7 +63,7 @@ test:
 # Security scanning
 security:audit:
   stage: test
-  image: node:20-alpine
+  image: node:22-alpine
   before_script:
     - npm ci --cache .npm --prefer-offline
   script:
@@ -77,7 +77,7 @@ security:audit:
 # Build application
 build:app:
   stage: build
-  image: node:20-alpine
+  image: node:22-alpine
   before_script:
     - npm ci --cache .npm --prefer-offline
   script:

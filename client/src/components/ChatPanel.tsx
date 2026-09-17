@@ -29,6 +29,20 @@ interface ProviderModels {
 /** Sentinel telling the server to use whichever model the provider has loaded. */
 const AUTO_MODEL = 'auto';
 
+const PROVIDER_LABELS: Record<string, string> = {
+  lmstudio: 'LM Studio',
+  ollama: 'Ollama',
+  openrouter: 'OpenRouter',
+  openai: 'OpenAI-compatible',
+};
+
+const CLOUD_PROVIDERS = new Set(['openrouter', 'openai']);
+
+interface BscSyncState {
+  following: boolean;
+  snapshot: { provider: string; model: string; baseUrl?: string; syncedAt: number } | null;
+}
+
 interface ChatPanelProps {
   selectedFileId: number | null;
   onApplyCode?: (code: string) => void;
@@ -130,9 +144,15 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     ollama_base_url: 'http://localhost:11434',
     lmstudio_base_url: 'http://localhost:1234',
     lmstudio_api_key: '',
+    openrouter_api_key: '',
+    openai_base_url: '',
+    openai_api_key: '',
     bsc_license_key: '',
     chat_workflow: DEFAULT_WORKFLOW_ID,
   });
+  const [bscSync, setBscSync] = React.useState<BscSyncState | null>(null);
+  const [bscSyncBusy, setBscSyncBusy] = React.useState(false);
+  const [bscSyncNotice, setBscSyncNotice] = React.useState<{ tone: 'ok' | 'warn' | 'error'; text: string } | null>(null);
   const [licenseStatus, setLicenseStatus] = React.useState<{ linked: boolean; valid: boolean; tier: string; error?: string } | null>(null);
   const [workflowId, setWorkflowId] = React.useState(DEFAULT_WORKFLOW_ID);
   const workflow = getWorkflow(workflowId);
@@ -204,8 +224,52 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
     if (isSettingsOpen) {
       loadModels();
       loadLicenseStatus();
+      loadBscSync();
+      setBscSyncNotice(null);
     }
   }, [isSettingsOpen]);
+
+  async function loadBscSync() {
+    try {
+      const response = await fetch('/api/casper/status');
+      if (!response.ok) throw new Error(String(response.status));
+      const data = await response.json();
+      setBscSync(data.bscSync ?? null);
+    } catch {
+      setBscSync(null);
+    }
+  }
+
+  async function useBscModel() {
+    setBscSyncBusy(true);
+    setBscSyncNotice(null);
+    try {
+      const response = await fetch('/api/casper/bsc-model/apply', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `BSC-V3 sync failed (${response.status})`);
+      await loadSettings();
+      setBscSync({ following: true, snapshot: data.snapshot });
+      const label = data.providerLabel || data.snapshot?.provider;
+      setBscSyncNotice(data.needsKey
+        ? { tone: 'warn', text: `Now following BSC-V3: ${label} / ${data.snapshot?.model}. Paste your ${label} API key below and Save — BSC-V3 never sends keys to this machine.` }
+        : { tone: 'ok', text: `Now following BSC-V3: ${label} / ${data.snapshot?.model}. Casper re-checks BSC-V3 before each directive until you change the model here.` });
+      loadModels();
+    } catch (error) {
+      setBscSyncNotice({ tone: 'error', text: error instanceof Error ? error.message : 'BSC-V3 sync failed' });
+    } finally {
+      setBscSyncBusy(false);
+    }
+  }
+
+  async function stopFollowingBsc() {
+    try {
+      const response = await fetch('/api/casper/bsc-model/unfollow', { method: 'POST' });
+      setBscSync(await response.json());
+      setBscSyncNotice(null);
+    } catch (error) {
+      console.error('Error unfollowing BSC-V3 model:', error);
+    }
+  }
 
   async function loadLicenseStatus() {
     try {
@@ -277,7 +341,10 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
 
   async function saveSettings() {
     try {
-      for (const key of ['model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url', 'lmstudio_api_key', 'bsc_license_key'] as const) {
+      for (const key of [
+        'model_provider', 'model_name', 'ollama_base_url', 'lmstudio_base_url', 'lmstudio_api_key',
+        'openrouter_api_key', 'openai_base_url', 'openai_api_key', 'bsc_license_key',
+      ] as const) {
         await fetch(`/api/settings/${key}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -475,6 +542,10 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
   }
 
   const providerModels = availableModels.find((p) => p.provider === settings.model_provider)?.models ?? [];
+  const isCloud = CLOUD_PROVIDERS.has(settings.model_provider);
+  const providerLabel = PROVIDER_LABELS[settings.model_provider] ?? settings.model_provider;
+  // Cloud catalogs are hundreds of ids; a filterable text field beats a giant dropdown.
+  const useModelDropdown = providerModels.length > 0 && !isCloud;
 
   return (
     <div className="h-full flex flex-col bg-black/60 backdrop-blur-xs">
@@ -496,6 +567,34 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                 <DialogTitle className="text-cyan-400">Settings</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                <div className="rounded border border-burgundy-500/40 bg-burgundy-950/20 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm text-purple-200 font-semibold">Same model as BSC-V3</p>
+                      <p className="text-xs text-purple-400/70">
+                        {bscSync?.following && bscSync.snapshot
+                          ? <>Following AI Core: <code>{PROVIDER_LABELS[bscSync.snapshot.provider] ?? bscSync.snapshot.provider}</code> / <code>{bscSync.snapshot.model}</code></>
+                          : 'Pull the model + endpoint from your web Casper AI Core (needs this machine linked in the Casper panel).'}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button size="sm" variant="outline" disabled={bscSyncBusy} onClick={useBscModel}
+                        className="border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20">
+                        {bscSyncBusy ? 'Syncing…' : bscSync?.following ? 'Re-sync' : 'Use BSC-V3 model'}
+                      </Button>
+                      {bscSync?.following && (
+                        <Button size="sm" variant="ghost" onClick={stopFollowingBsc} className="text-purple-300 hover:bg-red-500/20 hover:text-red-400">
+                          Stop
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {bscSyncNotice && (
+                    <p className={`text-xs ${bscSyncNotice.tone === 'ok' ? 'text-emerald-400' : bscSyncNotice.tone === 'warn' ? 'text-amber-300' : 'text-red-400'}`}>
+                      {bscSyncNotice.text}
+                    </p>
+                  )}
+                </div>
                 <div>
                   <Label className="text-purple-300">Provider</Label>
                   <Select
@@ -506,14 +605,16 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-950 border-cyan-500/50 text-cyan-100">
-                      <SelectItem value="lmstudio">LM Studio</SelectItem>
-                      <SelectItem value="ollama">Ollama</SelectItem>
+                      <SelectItem value="lmstudio">LM Studio (local)</SelectItem>
+                      <SelectItem value="ollama">Ollama (local)</SelectItem>
+                      <SelectItem value="openrouter">OpenRouter (cloud)</SelectItem>
+                      <SelectItem value="openai">OpenAI-compatible (cloud)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-purple-300">Model</Label>
-                  {providerModels.length > 0 ? (
+                  {useModelDropdown ? (
                     <Select
                       value={settings.model_name}
                       onValueChange={(value) => setSettings({ ...settings, model_name: value })}
@@ -531,17 +632,68 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                   ) : (
                     <>
                       <Input
-                        value={settings.model_name}
+                        id="model-name"
+                        list={isCloud && providerModels.length > 0 ? 'cloud-model-options' : undefined}
+                        value={isCloud && settings.model_name === AUTO_MODEL ? '' : settings.model_name}
                         onChange={(e) => setSettings({ ...settings, model_name: e.target.value })}
+                        placeholder={settings.model_provider === 'openrouter' ? 'e.g. qwen/qwen3.8-27b' : isCloud ? 'model id' : AUTO_MODEL}
                         className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                       />
+                      {isCloud && providerModels.length > 0 && (
+                        <datalist id="cloud-model-options">
+                          {providerModels.map((m) => <option key={m} value={m} />)}
+                        </datalist>
+                      )}
                       <p className="text-xs text-purple-400/60 mt-1">
-                        No models reported by {settings.model_provider === 'lmstudio' ? 'LM Studio' : 'Ollama'} — is it running?
-                        Leave this as <code>auto</code> to use whichever model it has loaded.
+                        {isCloud
+                          ? providerModels.length > 0
+                            ? `Start typing to search ${providerModels.length} ${providerLabel} models, or paste a model id.`
+                            : `Paste a ${providerLabel} model id. Save your API key first to load the catalog.`
+                          : <>No models reported by {providerLabel} — is it running?
+                            Leave this as <code>auto</code> to use whichever model it has loaded.</>}
                       </p>
                     </>
                   )}
                 </div>
+                {settings.model_provider === 'openrouter' && (
+                  <div>
+                    <Label htmlFor="openrouter-api-key" className="text-purple-300">OpenRouter API Key</Label>
+                    <Input
+                      id="openrouter-api-key"
+                      type="password"
+                      value={settings.openrouter_api_key}
+                      onChange={(e) => setSettings({ ...settings, openrouter_api_key: e.target.value })}
+                      placeholder="sk-or-… from openrouter.ai/keys"
+                      className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
+                    />
+                    <p className="text-xs text-purple-400/60 mt-1">Stored only in this machine's Local Coder database. Endpoint: <code>https://openrouter.ai/api/v1</code>.</p>
+                  </div>
+                )}
+                {settings.model_provider === 'openai' && (
+                  <>
+                    <div>
+                      <Label htmlFor="openai-url" className="text-purple-300">OpenAI-compatible Base URL</Label>
+                      <Input
+                        id="openai-url"
+                        value={settings.openai_base_url}
+                        onChange={(e) => setSettings({ ...settings, openai_base_url: e.target.value })}
+                        placeholder="https://api.openai.com"
+                        className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="openai-api-key" className="text-purple-300">API Key</Label>
+                      <Input
+                        id="openai-api-key"
+                        type="password"
+                        value={settings.openai_api_key}
+                        onChange={(e) => setSettings({ ...settings, openai_api_key: e.target.value })}
+                        className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
+                      />
+                    </div>
+                  </>
+                )}
+                {settings.model_provider === 'lmstudio' && (<>
                 <div>
                   <Label htmlFor="lmstudio-url" className="text-purple-300">LM Studio Base URL</Label>
                   <Input
@@ -562,6 +714,8 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                     className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
                 </div>
+                </>)}
+                {settings.model_provider === 'ollama' && (
                 <div>
                   <Label htmlFor="base-url" className="text-purple-300">Ollama Base URL</Label>
                   <Input
@@ -571,6 +725,7 @@ export default function ChatPanel({ selectedFileId, onApplyCode, onApplyMany }: 
                     className="bg-black/40 border-cyan-500/50 text-cyan-100 focus:border-cyan-400"
                   />
                 </div>
+                )}
                 <div>
                   <Label htmlFor="bsc-license-key" className="text-purple-300">BSC License Key</Label>
                   <Input

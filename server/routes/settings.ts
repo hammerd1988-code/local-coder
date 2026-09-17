@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db.js';
 import { invalidateLicenseCache } from '../license.js';
+import { SETTING_ENV_DEFAULTS, settingEnvDefault } from '../model-provider.js';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  * placeholder instead, and PUTs of the placeholder are ignored so a client
  * echoing settings back doesn't clobber the stored secret.
  */
-const SECRET_KEYS = new Set(['lmstudio_api_key', 'bsc_license_key']);
+const SECRET_KEYS = new Set(['lmstudio_api_key', 'openrouter_api_key', 'openai_api_key', 'bsc_license_key']);
 export const SECRET_PLACEHOLDER = '********';
 
 // Get all settings
@@ -25,7 +26,15 @@ router.get('/', async (req: express.Request, res: express.Response) => {
         : setting.value;
       return acc;
     }, {} as Record<string, string>);
-    
+
+    // Model settings supplied via environment show up like saved values so
+    // the UI reflects what the server actually uses.
+    for (const key of Object.keys(SETTING_ENV_DEFAULTS)) {
+      if (settingsObj[key]?.trim()) continue;
+      const fallback = settingEnvDefault(key);
+      if (fallback) settingsObj[key] = SECRET_KEYS.has(key) ? SECRET_PLACEHOLDER : fallback;
+    }
+
     res.json(settingsObj);
     return;
   } catch (error) {

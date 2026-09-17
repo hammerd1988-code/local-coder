@@ -17,7 +17,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  nodeVersion: '20.x'
+  nodeVersion: '22.23.x'
   dockerRegistryServiceConnection: 'dockerHub'
   imageRepository: 'local-coder'
   containerRegistry: 'your-registry.azurecr.io'
@@ -69,8 +69,7 @@ stages:
             displayName: 'Install dependencies'
 
           - script: |
-              echo "Running tests..."
-              # npm test
+              npm test
             displayName: 'Run tests'
 
           - task: PublishTestResults@2
