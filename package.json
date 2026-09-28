@@ -77,15 +77,15 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "5.0.6",
     "@types/http-proxy": "^1.17.17",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.1",
-    "ignore": "7.0.8",
+    "ignore": "7.0.10",
     "postcss": "8.5.28",
     "tailwindcss": "4.3.3",
-    "tsx": "4.23.13",
+    "tsx": "4.23.15",
     "typescript": "5.8.2",
-    "vite": "8.2.2"
+    "vite": "8.3.1"
   }
 }
