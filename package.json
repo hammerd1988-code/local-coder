@@ -64,7 +64,7 @@
     "react-resizable-panels": "^4.12.3",
     "react-router-dom": "^7.18.3",
     "recharts": "^3.10.1",
-    "simple-git": "^3.36.0",
+    "simple-git": "^4.0.2",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "3.6.0",
     "tailwindcss-animate": "1.0.7",
