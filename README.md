@@ -21,6 +21,18 @@ A full-featured web-based code editor with terminal, file explorer, git integrat
 
 ## Getting Started
 
+### Download and run (any OS)
+
+Requires Node.js 22.12+ and git.
+
+```bash
+git clone https://github.com/hammerd1988-code/local-coder
+cd local-coder
+npm run local
+```
+
+This installs dependencies, builds, starts the server on http://localhost:4000 and opens your browser. Data is stored in `./data`. Use `npm run local -- --rebuild` after pulling updates. Prefer containers? `docker-compose up` does the same.
+
 ### Local Development
 
 1. Install dependencies:

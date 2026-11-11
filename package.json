@@ -11,6 +11,7 @@
     "start": "tsx watch scripts/dev.ts",
     "app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch-local-coder.ps1",
     "app:icon": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1",
+    "local": "node scripts/run-local.mjs",
     "app:linux": "bash scripts/local-coder-launch.sh",
     "app:linux:install": "bash scripts/install-linux-desktop.sh",
     "check:node": "node scripts/check-node-version.mjs",
