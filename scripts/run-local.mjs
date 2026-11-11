@@ -9,9 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const port = process.env.LOCAL_CODER_PORT || process.env.PORT || '4000';
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const run = (cmd, args, opts = {}) =>
-  spawnSync(cmd, args, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32', ...opts });
+// npm is a .cmd shim on Windows and needs a shell; node.exe must NOT go
+// through one (its path usually contains spaces, e.g. C:\Program Files).
+const run = (cmd, args) =>
+  spawnSync(cmd, args, { cwd: root, stdio: 'inherit', shell: cmd === 'npm' && process.platform === 'win32' });
+const npm = 'npm';
 
 if (run(process.execPath, [join(root, 'scripts/check-node-version.mjs')]).status !== 0) process.exit(1);
 
