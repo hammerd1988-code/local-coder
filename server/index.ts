@@ -2,6 +2,7 @@
 // are evaluated before this module's body runs.
 import 'dotenv/config';
 import express from 'express';
+import { pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { setupStaticServing } from './static-serve.js';
 import filesRouter from './routes/files.js';
@@ -163,7 +164,7 @@ export async function startServer(port: number | string) {
 }
 
 // Start the server directly if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   console.log('Starting server...');
   startServer(process.env.PORT || 3001);
 }
